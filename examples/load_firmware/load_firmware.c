@@ -47,13 +47,9 @@
 #define UPLOAD_FIRMWARE_TO_FLASH
 
 #ifdef UPLOAD_FIRMWARE_TO_FLASH
-#include "bhi260/Bosch_SHUTTLE_BHI260-flash.fw.h"
-
-/* No flash option for the BHA260 */
+#include "bhi260ap/Bosch_APP30_SHUTTLE_BHI260-flash.fw.h"
 #else
-#include "bhi260/Bosch_SHUTTLE_BHI260.fw.h"
-
-/* #include "bha260/Bosch_SHUTTLE_BHA260.fw.h" */
+#include "bhi260ap/Bosch_APP30_SHUTTLE_BHI260.fw.h"
 #endif
 
 #if defined (PC)

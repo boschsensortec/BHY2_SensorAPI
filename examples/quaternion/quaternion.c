@@ -30,9 +30,9 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * @file    euler.c
+ * @file    quaternion.c
  * @date    24 Mar 2020
- * @brief   Euler data stream example for the BHI260/BHA260
+ * @brief   Quaternion data stream example for the BHI260/BHA260
  *
  */
 
@@ -44,9 +44,7 @@
 #include "bhy2_parse.h"
 #include "common.h"
 
-#include "bhi260/Bosch_SHUTTLE_BHI260_BMM150.fw.h"
-
-/* #include "bha260/Bosch_SHUTTLE_BHA260_BMG250_BMM150.fw.h" */
+#include "bhi260ap/Bosch_APP30_SHUTTLE_BHI260_aux_BMM150.fw.h"
 
 #define WORK_BUFFER_SIZE   2048
 #if defined (PC)
@@ -55,9 +53,9 @@
 #define MAX_READ_WRITE_LEN 256
 #endif
 
-#define EULER_SENSOR_ID    BHY2_SENSOR_ID_ORI_WU
+#define QUAT_SENSOR_ID     BHY2_SENSOR_ID_RV_WU
 
-static void parse_euler(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
+static void parse_quaternion(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
 static void parse_meta_event(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
 static void print_api_error(int8_t rslt, struct bhy2_dev *dev);
 
@@ -69,7 +67,6 @@ int main(void)
     struct bhy2_dev bhy2;
     uint8_t work_buffer[WORK_BUFFER_SIZE];
     uint8_t hintr_ctrl, hif_ctrl, boot_status;
-    uint8_t accuracy; /* Accuracy is reported as a meta event. It is being printed alongside the data */
 
     setup_interfaces(true, BHY2_SPI_INTERFACE); /* Perform a power on reset */
 
@@ -152,11 +149,11 @@ int main(void)
             printf("Boot successful. Kernel version %u.\r\n", version);
         }
 
-        rslt = bhy2_register_fifo_parse_callback(BHY2_SYS_ID_META_EVENT, parse_meta_event, (void*)&accuracy, &bhy2);
+        rslt = bhy2_register_fifo_parse_callback(BHY2_SYS_ID_META_EVENT, parse_meta_event, NULL, &bhy2);
         print_api_error(rslt, &bhy2);
-        rslt = bhy2_register_fifo_parse_callback(BHY2_SYS_ID_META_EVENT_WU, parse_meta_event, (void*)&accuracy, &bhy2);
+        rslt = bhy2_register_fifo_parse_callback(BHY2_SYS_ID_META_EVENT_WU, parse_meta_event, NULL, &bhy2);
         print_api_error(rslt, &bhy2);
-        rslt = bhy2_register_fifo_parse_callback(EULER_SENSOR_ID, parse_euler, (void*)&accuracy, &bhy2);
+        rslt = bhy2_register_fifo_parse_callback(QUAT_SENSOR_ID, parse_quaternion, NULL, &bhy2);
         print_api_error(rslt, &bhy2);
 
         rslt = bhy2_get_and_process_fifo(work_buffer, WORK_BUFFER_SIZE, &bhy2);
@@ -177,9 +174,9 @@ int main(void)
 
     float sample_rate = 100.0; /* Read out data measured at 100Hz */
     uint32_t report_latency_ms = 0; /* Report immediately */
-    rslt = bhy2_set_virt_sensor_cfg(EULER_SENSOR_ID, sample_rate, report_latency_ms, &bhy2);
+    rslt = bhy2_set_virt_sensor_cfg(QUAT_SENSOR_ID, sample_rate, report_latency_ms, &bhy2);
     print_api_error(rslt, &bhy2);
-    printf("Enable %s at %.2fHz.\r\n", get_sensor_name(EULER_SENSOR_ID), sample_rate);
+    printf("Enable %s at %.2fHz.\r\n", get_sensor_name(QUAT_SENSOR_ID), sample_rate);
 
     while (rslt == BHY2_OK)
     {
@@ -196,18 +193,17 @@ int main(void)
     return rslt;
 }
 
-static void parse_euler(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref)
+static void parse_quaternion(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref)
 {
     (void)callback_ref;
-    struct bhy2_data_orientation data;
+    struct bhy2_data_quaternion data;
     uint32_t s, ns;
-    uint8_t *accuracy = (uint8_t*)callback_ref;
-    if (callback_info->data_size != 7) /* Check for a valid payload size. Includes sensor ID */
+    if (callback_info->data_size != 11) /* Check for a valid payload size. Includes sensor ID */
     {
         return;
     }
 
-    bhy2_parse_orientation(callback_info->data_ptr, &data);
+    bhy2_parse_quaternion(callback_info->data_ptr, &data);
 
     uint64_t timestamp = *callback_info->time_stamp; /* Store the last timestamp */
 
@@ -215,27 +211,15 @@ static void parse_euler(const struct bhy2_fifo_parse_data_info *callback_info, v
     s = (uint32_t)(timestamp / UINT64_C(1000000000));
     ns = (uint32_t)(timestamp - (s * UINT64_C(1000000000)));
 
-    if (accuracy)
-    {
-        printf("SID: %u; T: %u.%09u; h: %f, p: %f, r: %f; acc: %u\r\n",
-               callback_info->sensor_id,
-               s,
-               ns,
-               data.heading * 360.0f / 32768.0f,
-               data.pitch * 360.0f / 32768.0f,
-               data.roll * 360.0f / 32768.0f,
-               *accuracy);
-    }
-    else
-    {
-        printf("SID: %u; T: %u.%09u; h: %f, p: %f, r: %f\r\n",
-               callback_info->sensor_id,
-               s,
-               ns,
-               data.heading * 360.0f / 32768.0f,
-               data.pitch * 360.0f / 32768.0f,
-               data.roll * 360.0f / 32768.0f);
-    }
+    printf("SID: %u; T: %u.%09u; x: %f, y: %f, z: %f, w: %f; acc: %.2f\r\n",
+           callback_info->sensor_id,
+           s,
+           ns,
+           data.x / 16384.0f,
+           data.y / 16384.0f,
+           data.z / 16384.0f,
+           data.w / 16384.0f,
+           ((data.accuracy * 180.0f) / 16384.0f) / 3.141592653589793f);
 }
 
 static void parse_meta_event(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref)
@@ -244,7 +228,6 @@ static void parse_meta_event(const struct bhy2_fifo_parse_data_info *callback_in
     uint8_t meta_event_type = callback_info->data_ptr[0];
     uint8_t byte1 = callback_info->data_ptr[1];
     uint8_t byte2 = callback_info->data_ptr[2];
-    uint8_t *accuracy = (uint8_t*)callback_ref;
     char *event_text;
 
     if (callback_info->sensor_id == BHY2_SYS_ID_META_EVENT)
@@ -276,10 +259,6 @@ static void parse_meta_event(const struct bhy2_fifo_parse_data_info *callback_in
             break;
         case BHY2_META_EVENT_SENSOR_STATUS:
             printf("%s Accuracy for sensor id %u changed to %u\r\n", event_text, byte1, byte2);
-            if (accuracy)
-            {
-                *accuracy = byte2;
-            }
             break;
         case BHY2_META_EVENT_BSX_DO_STEPS_MAIN:
             printf("%s BSX event (do steps main)\r\n", event_text);
