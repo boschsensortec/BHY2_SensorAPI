@@ -717,7 +717,7 @@ enum bhy2_data_inj_mode {
     BHY2_STEP_BY_STEP_INJECTION = 2
 };
 
-#define BHY2_BYTE_TO_NIBBLE(X) (((uint8_t)(X)[0] & 0x0F) | (((uint8_t)(X)[1] << 4) & 0x0F))
+#define BHY2_BYTE_TO_NIBBLE(X) (((uint8_t)(X)[0] & 0x0F) | (((uint8_t)(X)[1] << 4) & 0xF0))
 
 #ifdef __cplusplus
 }
