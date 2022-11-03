@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -31,8 +31,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * @file    common.c
- * @date    24 Mar 2020
- * @brief   Common source file for the BHI260/BHA260 examples
+ * @brief   Common source file for the BHy260 examples
  *
  */
 
@@ -44,24 +43,46 @@
 #include <stdlib.h>
 
 #include "bhy2_parse.h"
-#include "bhy2.h"
 
-#include "coines.h"
+#define BHA260_SHUTTLE_ID  0x139
+#define BHI260_SHUTTLE_ID  0x119
 
-#define BHA260_SHUTTLE_ID 0x139
-#define BHI260_SHUTTLE_ID 0x119
+#ifndef PC
+static uint8_t verb_buff[256] = { 0 };
+#endif
+
+void verbose_write(uint8_t *buffer, uint16_t length);
+
+#ifndef PC
+#define PRINT(format, ...)                             \
+    sprintf((char *)verb_buff, format,##__VA_ARGS__); \
+    verbose_write(verb_buff, strlen((char *)verb_buff));
+#else
+#define PRINT(format, ...)  printf(format,##__VA_ARGS__)
+#endif
+
+static enum coines_multi_io_pin cs_pin = BHY260_APP20_CS_PIN;
+static enum coines_multi_io_pin int_pin = BHY260_APP20_INT_PIN;
+static enum coines_multi_io_pin reset_pin = BHY260_APP20_RESET_PIN;
 
 bool get_interrupt_status(void)
 {
-    enum coines_pin_direction pin_direction = COINES_PIN_DIRECTION_IN;
-    enum coines_pin_value pin_value = COINES_PIN_VALUE_LOW;
+    int16_t coines_rslt;
+    enum coines_pin_direction pin_direction;
+    enum coines_pin_value pin_value;
 
-    coines_get_pin_config(BHY260_INT_PIN, &pin_direction, &pin_value);
+    pin_direction = COINES_PIN_DIRECTION_IN;
+    pin_value = COINES_PIN_VALUE_HIGH;
+    coines_rslt = coines_get_pin_config(int_pin, &pin_direction, &pin_value);
+    if (coines_rslt != COINES_SUCCESS)
+    {
+        PRINT("Error getting interrupt pin status\r\n.%s\r\n", get_coines_error(coines_rslt));
+    }
 
-    return (pin_value == COINES_PIN_VALUE_HIGH) ? true : false;
+    return pin_value == COINES_PIN_VALUE_HIGH;
 }
 
-char* get_coines_error(int16_t rslt)
+char *get_coines_error(int16_t rslt)
 {
     char *ret = " ";
 
@@ -99,6 +120,33 @@ char* get_coines_error(int16_t rslt)
         case COINES_E_COMM_WRONG_RESPONSE:
             ret = "[COINES Error] Unexpected response";
             break;
+        case COINES_E_SPI16BIT_NOT_CONFIGURED:
+            ret = "[COINES Error] 16-Bit SPI not configured";
+            break;
+        case COINES_E_SPI_INVALID_BUS_INTF:
+            ret = "[COINES Error] Invalid SPI bus interface";
+            break;
+        case COINES_E_SPI_CONFIG_EXIST:
+            ret = "[COINES Error] SPI already configured";
+            break;
+        case COINES_E_SPI_BUS_NOT_ENABLED:
+            ret = "[COINES Error] SPI bus not enabled";
+            break;
+        case COINES_E_SPI_CONFIG_FAILED:
+            ret = "[COINES Error] SPI configuration failed";
+            break;
+        case COINES_E_I2C_INVALID_BUS_INTF:
+            ret = "[COINES Error] Invalid I2C bus interface";
+            break;
+        case COINES_E_I2C_BUS_NOT_ENABLED:
+            ret = "[COINES Error] I2C bus not enabled";
+            break;
+        case COINES_E_I2C_CONFIG_FAILED:
+            ret = "[COINES Error] I2C configuration failed";
+            break;
+        case COINES_E_I2C_CONFIG_EXIST:
+            ret = "[COINES Error] I2C already configured";
+            break;
         default:
             ret = "[COINES Error] Unknown error code";
     }
@@ -106,7 +154,7 @@ char* get_coines_error(int16_t rslt)
     return ret;
 }
 
-char* get_api_error(int8_t error_code)
+char *get_api_error(int8_t error_code)
 {
     char *ret = " ";
 
@@ -150,89 +198,140 @@ char* get_api_error(int8_t error_code)
 
 void setup_interfaces(bool reset_power, enum bhy2_intf intf)
 {
-    int16_t coines_rslt = coines_open_comm_intf(COINES_COMM_INTF_USB);
-    enum coines_pin_direction pin_direction = COINES_PIN_DIRECTION_IN;
-    enum coines_pin_value pin_value = COINES_PIN_VALUE_LOW;
+    int16_t coines_rslt = COINES_SUCCESS;
+    enum coines_pin_direction pin_direction;
+    enum coines_pin_value pin_value;
+    struct coines_board_info board_info;
 
+#ifndef PC
+    coines_rslt = coines_open_comm_intf(COINES_COMM_INTF_BLE, NULL);
+#else
+    coines_rslt = coines_open_comm_intf(COINES_COMM_INTF_USB, NULL);
+#endif
     if (coines_rslt)
     {
-        printf("%s\n", get_coines_error(coines_rslt));
+        PRINT("%s\n", get_coines_error(coines_rslt));
     }
 
-    struct coines_board_info board_info;
     coines_rslt = coines_get_board_info(&board_info);
     if (coines_rslt == COINES_SUCCESS)
     {
-        if (BHA260_SHUTTLE_ID == board_info.shuttle_id)
+        if (board_info.board == 5) /* Application Board 3.0 */
         {
-            /*printf("Found BHA260 Shuttle\n"); */
-        }
-        else if (BHI260_SHUTTLE_ID == board_info.shuttle_id)
-        {
-            /*printf("Found BHI260 Shuttle\n"); */
-        }
-        else
-        {
-            /*printf("Expecting a BHA260 or BHI260 shuttle\n"); */
+            cs_pin = BHY260_APP30_CS_PIN;
+            int_pin = BHY260_APP30_INT_PIN;
+            reset_pin = BHY260_APP30_RESET_PIN;
         }
     }
     else
     {
-        printf("%s\r\n", get_coines_error(coines_rslt));
+        PRINT("%s\r\n", get_coines_error(coines_rslt));
     }
 
     if (reset_power)
     {
-        coines_set_shuttleboard_vdd_vddio_config(0, 0);
+        coines_rslt = coines_set_shuttleboard_vdd_vddio_config(0, 0);
+        if (coines_rslt != COINES_SUCCESS)
+        {
+            PRINT("%s\r\n", get_coines_error(coines_rslt));
+        }
+
+        pin_direction = COINES_PIN_DIRECTION_OUT;
+        pin_value = COINES_PIN_VALUE_LOW;
+        coines_rslt = coines_set_pin_config(reset_pin, pin_direction, pin_value);
+        if (coines_rslt != COINES_SUCCESS)
+        {
+            PRINT("%s\r\n", get_coines_error(coines_rslt));
+        }
+
         coines_delay_msec(10);
     }
 
     if (intf == BHY2_SPI_INTERFACE)
     {
-        coines_config_spi_bus(COINES_SPI_BUS_0, COINES_SPI_SPEED_1_MHZ, COINES_SPI_MODE0);
+        PRINT("Host Interface : SPI\r\n");
+        coines_rslt = coines_config_spi_bus(COINES_SPI_BUS_0, COINES_SPI_SPEED_1_MHZ, COINES_SPI_MODE0);
+        if (coines_rslt != COINES_SUCCESS)
+        {
+            PRINT("Error configuring to SPI.\r\n%s\r\n", get_coines_error(coines_rslt));
+        }
     }
     else
     {
-        coines_config_i2c_bus(COINES_I2C_BUS_0, COINES_I2C_FAST_MODE);
+        PRINT("Host Interface : I2C\r\n");
+        coines_rslt = coines_config_i2c_bus(COINES_I2C_BUS_0, COINES_I2C_FAST_MODE);
+        if (coines_rslt != COINES_SUCCESS)
+        {
+            PRINT("Error configuring to I2C.\r\n%s\r\n", get_coines_error(coines_rslt));
+        }
     }
-    coines_set_shuttleboard_vdd_vddio_config(1800, 1800);
 
-    coines_set_pin_config(BHY260_INT_PIN, pin_direction, pin_value);
+    coines_rslt = coines_set_shuttleboard_vdd_vddio_config(1800, 1800);
+    if (coines_rslt != COINES_SUCCESS)
+    {
+        PRINT("Error setting Vdd and Vddio to 1.8V.\r\n%s\r\n", get_coines_error(coines_rslt));
+    }
 
-    coines_delay_msec(10);
+    pin_direction = COINES_PIN_DIRECTION_OUT;
+    pin_value = COINES_PIN_VALUE_HIGH;
+    coines_rslt = coines_set_pin_config(reset_pin, pin_direction, pin_value);
+    if (coines_rslt != COINES_SUCCESS)
+    {
+        PRINT("Error setting the reset pin\r\n.%s\r\n", get_coines_error(coines_rslt));
+    }
+
+    /* Configure as a pull-down. The BHy260 operates the interrupt pin as an active high, level, push-pull by default */
+    pin_direction = COINES_PIN_DIRECTION_IN;
+    pin_value = COINES_PIN_VALUE_LOW;
+    coines_rslt = coines_set_pin_config(int_pin, pin_direction, pin_value);
+    if (coines_rslt != COINES_SUCCESS)
+    {
+        PRINT("Error configuring the interrupt pin\r\n.%s\r\n", get_coines_error(coines_rslt));
+    }
+
+    coines_delay_msec(50);
 }
 
-void close_interfaces(void)
+void close_interfaces(enum bhy2_intf intf)
 {
-    coines_close_comm_intf(COINES_COMM_INTF_USB);
+    if (intf == BHY2_I2C_INTERFACE)
+    {
+        coines_deconfig_i2c_bus(COINES_I2C_BUS_0);
+    }
+    else
+    {
+        coines_deconfig_spi_bus(COINES_SPI_BUS_0);
+    }
+
+    coines_close_comm_intf(COINES_COMM_INTF_USB, NULL);
 }
 
 int8_t bhy2_spi_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t length, void *intf_ptr)
 {
     (void)intf_ptr;
 
-    return coines_read_spi(BHY260_CS_PIN, reg_addr, reg_data, (uint16_t)length);
+    return coines_read_spi(COINES_SPI_BUS_0, cs_pin, reg_addr, reg_data, (uint16_t)length);
 }
 
 int8_t bhy2_spi_write(uint8_t reg_addr, const uint8_t *reg_data, uint32_t length, void *intf_ptr)
 {
     (void)intf_ptr;
 
-    return coines_write_spi(BHY260_CS_PIN, reg_addr, (uint8_t*)reg_data, (uint16_t)length);
+    return coines_write_spi(COINES_SPI_BUS_0, cs_pin, reg_addr, (uint8_t *)reg_data, (uint16_t)length);
 }
 
 int8_t bhy2_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t length, void *intf_ptr)
 {
     (void)intf_ptr;
 
-    return coines_read_i2c(0x28, reg_addr, reg_data, (uint16_t)length);
+    return coines_read_i2c(COINES_I2C_BUS_0, 0x28, reg_addr, reg_data, (uint16_t)length);
 }
 
 int8_t bhy2_i2c_write(uint8_t reg_addr, const uint8_t *reg_data, uint32_t length, void *intf_ptr)
 {
     (void)intf_ptr;
 
-    return coines_write_i2c(0x28, reg_addr, (uint8_t*)reg_data, (uint16_t)length);
+    return coines_write_i2c(COINES_I2C_BUS_0, 0x28, reg_addr, (uint8_t *)reg_data, (uint16_t)length);
 }
 
 void bhy2_delay_us(uint32_t us, void *private_data)
@@ -241,7 +340,7 @@ void bhy2_delay_us(uint32_t us, void *private_data)
     coines_delay_usec(us);
 }
 
-char* get_sensor_error_text(uint8_t sensor_error)
+char *get_sensor_error_text(uint8_t sensor_error)
 {
     char *ret;
 
@@ -484,7 +583,7 @@ char* get_sensor_error_text(uint8_t sensor_error)
     return ret;
 }
 
-char* get_sensor_name(uint8_t sensor_id)
+char *get_sensor_name(uint8_t sensor_id)
 {
     char *ret;
 
@@ -700,6 +799,30 @@ char* get_sensor_name(uint8_t sensor_id)
         case BHY2_SENSOR_ID_PROX_WU:
             ret = "Proximity wake up";
             break;
+        case BHY2_SENSOR_ID_KLIO:
+            ret = "Klio";
+            break;
+        case BHY2_SENSOR_ID_KLIO_LOG:
+            ret = "Klio log";
+            break;
+        case BHY2_SENSOR_ID_PDR:
+            ret = "Pedestrian Dead Reckoning";
+            break;
+        case BHY2_SENSOR_ID_PDR_LOG:
+            ret = "Pedestrian Dead Reckoning Log";
+            break;
+        case BHY2_SENSOR_ID_SWIM:
+            ret = "Swim recognition";
+            break;
+        case BHY2_SENSOR_ID_SI_ACCEL:
+            ret = "SI Accel";
+            break;
+        case BHY2_SENSOR_ID_SI_GYROS:
+            ret = "SI Gyro";
+            break;
+        case BHY2_SENSOR_ID_AIR_QUALITY:
+            ret = "Air Quality";
+            break;
         default:
             if ((sensor_id >= BHY2_SENSOR_ID_CUSTOM_START) && (sensor_id <= BHY2_SENSOR_ID_CUSTOM_END))
             {
@@ -713,3 +836,394 @@ char* get_sensor_name(uint8_t sensor_id)
 
     return ret;
 }
+
+float get_sensor_default_scaling(uint8_t sensor_id)
+{
+    float scaling = -1.0f;
+
+    switch (sensor_id)
+    {
+        case BHY2_SENSOR_ID_ACC_PASS:
+        case BHY2_SENSOR_ID_ACC_RAW:
+        case BHY2_SENSOR_ID_ACC:
+        case BHY2_SENSOR_ID_ACC_BIAS:
+        case BHY2_SENSOR_ID_ACC_WU:
+        case BHY2_SENSOR_ID_ACC_RAW_WU:
+        case BHY2_SENSOR_ID_GRA:
+        case BHY2_SENSOR_ID_GRA_WU:
+        case BHY2_SENSOR_ID_LACC:
+        case BHY2_SENSOR_ID_LACC_WU:
+        case BHY2_SENSOR_ID_ACC_BIAS_WU:
+            scaling = 1.0f / 4096.0f;
+            break;
+        case BHY2_SENSOR_ID_GYRO_PASS:
+        case BHY2_SENSOR_ID_GYRO_RAW:
+        case BHY2_SENSOR_ID_GYRO:
+        case BHY2_SENSOR_ID_GYRO_BIAS:
+        case BHY2_SENSOR_ID_GYRO_WU:
+        case BHY2_SENSOR_ID_GYRO_RAW_WU:
+        case BHY2_SENSOR_ID_GYRO_BIAS_WU:
+            scaling = 2000.0f / 32768.0f;
+            break;
+        case BHY2_SENSOR_ID_MAG_PASS:
+        case BHY2_SENSOR_ID_MAG_RAW:
+        case BHY2_SENSOR_ID_MAG:
+        case BHY2_SENSOR_ID_MAG_BIAS:
+        case BHY2_SENSOR_ID_MAG_WU:
+        case BHY2_SENSOR_ID_MAG_RAW_WU:
+        case BHY2_SENSOR_ID_MAG_BIAS_WU:
+            scaling = 2500.0f / 32768.0f;
+            break;
+        case BHY2_SENSOR_ID_RV:
+        case BHY2_SENSOR_ID_RV_WU:
+        case BHY2_SENSOR_ID_GAMERV:
+        case BHY2_SENSOR_ID_GAMERV_WU:
+        case BHY2_SENSOR_ID_GEORV:
+        case BHY2_SENSOR_ID_GEORV_WU:
+            scaling = 1.0f / 16384.0f;
+            break;
+        case BHY2_SENSOR_ID_ORI:
+        case BHY2_SENSOR_ID_ORI_WU:
+            scaling = 360.0f / 32768.0f;
+            break;
+
+        case BHY2_SENSOR_ID_TEMP:
+        case BHY2_SENSOR_ID_TEMP_WU:
+            scaling = 1.0f / 100.0f;
+            break;
+        case BHY2_SENSOR_ID_BARO:
+        case BHY2_SENSOR_ID_BARO_WU:
+            scaling = 100.0f / 128.0f;
+            break;
+        case BHY2_SENSOR_ID_HUM:
+        case BHY2_SENSOR_ID_HUM_WU:
+            scaling = 1.0f;
+            break;
+        case BHY2_SENSOR_ID_GAS:
+        case BHY2_SENSOR_ID_GAS_WU:
+            scaling = 1.0f;
+            break;
+        case BHY2_SENSOR_ID_LIGHT:
+        case BHY2_SENSOR_ID_LIGHT_WU:
+            scaling = 10000.0f / 216.0f;
+            break;
+        case BHY2_SENSOR_ID_PROX:
+        case BHY2_SENSOR_ID_PROX_WU:
+            scaling = 1.0f;
+            break;
+        case BHY2_SENSOR_ID_SI_ACCEL:
+        case BHY2_SENSOR_ID_SI_GYROS:
+
+            /* Scaling factor already applied in firmware*/
+            break;
+        default:
+            scaling = -1.0f; /* Do not apply the scaling factor */
+    }
+
+    return scaling;
+}
+
+char *get_sensor_parse_format(uint8_t sensor_id)
+{
+    char *ret;
+
+    switch (sensor_id)
+    {
+        case BHY2_SENSOR_ID_ACC_PASS:
+        case BHY2_SENSOR_ID_ACC_RAW:
+        case BHY2_SENSOR_ID_ACC:
+        case BHY2_SENSOR_ID_ACC_BIAS:
+        case BHY2_SENSOR_ID_ACC_BIAS_WU:
+        case BHY2_SENSOR_ID_ACC_WU:
+        case BHY2_SENSOR_ID_ACC_RAW_WU:
+        case BHY2_SENSOR_ID_GYRO_PASS:
+        case BHY2_SENSOR_ID_GYRO_RAW:
+        case BHY2_SENSOR_ID_GYRO:
+        case BHY2_SENSOR_ID_GYRO_BIAS:
+        case BHY2_SENSOR_ID_GYRO_BIAS_WU:
+        case BHY2_SENSOR_ID_GYRO_WU:
+        case BHY2_SENSOR_ID_GYRO_RAW_WU:
+        case BHY2_SENSOR_ID_MAG_PASS:
+        case BHY2_SENSOR_ID_MAG_RAW:
+        case BHY2_SENSOR_ID_MAG:
+        case BHY2_SENSOR_ID_MAG_BIAS:
+        case BHY2_SENSOR_ID_MAG_BIAS_WU:
+        case BHY2_SENSOR_ID_MAG_WU:
+        case BHY2_SENSOR_ID_MAG_RAW_WU:
+        case BHY2_SENSOR_ID_GRA:
+        case BHY2_SENSOR_ID_GRA_WU:
+        case BHY2_SENSOR_ID_LACC:
+        case BHY2_SENSOR_ID_LACC_WU:
+            ret = "s16,s16,s16";
+            break;
+        case BHY2_SENSOR_ID_RV:
+        case BHY2_SENSOR_ID_RV_WU:
+        case BHY2_SENSOR_ID_GAMERV:
+        case BHY2_SENSOR_ID_GAMERV_WU:
+        case BHY2_SENSOR_ID_GEORV:
+        case BHY2_SENSOR_ID_GEORV_WU:
+            ret = "s16,s16,s16,s16,u16";
+            break;
+        case BHY2_SENSOR_ID_ORI:
+        case BHY2_SENSOR_ID_ORI_WU:
+            ret = "s16,s16,s16";
+            break;
+        case BHY2_SENSOR_ID_TILT_DETECTOR:
+        case BHY2_SENSOR_ID_STD:
+        case BHY2_SENSOR_ID_SIG:
+        case BHY2_SENSOR_ID_WAKE_GESTURE:
+        case BHY2_SENSOR_ID_GLANCE_GESTURE:
+        case BHY2_SENSOR_ID_PICKUP_GESTURE:
+        case BHY2_SENSOR_ID_WRIST_TILT_GESTURE:
+        case BHY2_SENSOR_ID_STATIONARY_DET:
+        case BHY2_SENSOR_ID_MOTION_DET:
+        case BHY2_SENSOR_ID_STD_WU:
+        case BHY2_SENSOR_ID_STD_HW:
+        case BHY2_SENSOR_ID_SIG_HW:
+        case BHY2_SENSOR_ID_STD_HW_WU:
+        case BHY2_SENSOR_ID_SIG_HW_WU:
+        case BHY2_SENSOR_ID_ANY_MOTION:
+        case BHY2_SENSOR_ID_ANY_MOTION_WU:
+            ret = "";
+            break;
+        case BHY2_SENSOR_ID_STC:
+        case BHY2_SENSOR_ID_STC_WU:
+        case BHY2_SENSOR_ID_STC_HW:
+        case BHY2_SENSOR_ID_STC_HW_WU:
+            ret = "u32";
+            break;
+        case BHY2_SENSOR_ID_AR:
+            ret = "u16";
+            break;
+        case BHY2_SENSOR_ID_DEVICE_ORI:
+        case BHY2_SENSOR_ID_DEVICE_ORI_WU:
+            ret = "u8";
+            break;
+        case BHY2_SENSOR_ID_TEMP:
+        case BHY2_SENSOR_ID_TEMP_WU:
+            ret = "s16";
+            break;
+        case BHY2_SENSOR_ID_BARO:
+        case BHY2_SENSOR_ID_BARO_WU:
+            ret = "u24";
+            break;
+        case BHY2_SENSOR_ID_HUM:
+        case BHY2_SENSOR_ID_HUM_WU:
+            ret = "u8";
+            break;
+        case BHY2_SENSOR_ID_GAS:
+        case BHY2_SENSOR_ID_GAS_WU:
+            ret = "u32";
+            break;
+        case BHY2_SENSOR_ID_EXCAMERA:
+            ret = "u8";
+            break;
+        case BHY2_SENSOR_ID_GPS:
+            ret = "st";
+            break;
+        case BHY2_SENSOR_ID_LIGHT:
+        case BHY2_SENSOR_ID_LIGHT_WU:
+            ret = "s16";
+            break;
+        case BHY2_SENSOR_ID_PROX:
+        case BHY2_SENSOR_ID_PROX_WU:
+            ret = "u8";
+            break;
+        case BHY2_SENSOR_ID_KLIO:
+            ret = "u8,u8,u8,u8,u8,u8,f";
+            break;
+        case BHY2_SENSOR_ID_PDR:
+            ret = "s24,s24,s16,u16,u16,u16,u8";
+            break;
+        case BHY2_SENSOR_ID_SWIM:
+            ret = "u16,u16,u16,u16,u16,u16,u16";
+            break;
+        case BHY2_SENSOR_ID_SI_ACCEL:
+        case BHY2_SENSOR_ID_SI_GYROS:
+            ret = "f,f,f";
+            break;
+        case BHY2_SENSOR_ID_AIR_QUALITY:
+            ret = "f32,f32,f32,f32,f32,f32,f32,u8";
+            break;
+        default:
+            ret = "";
+    }
+
+    return ret;
+}
+
+char *get_sensor_axis_names(uint8_t sensor_id)
+{
+    char *ret;
+
+    switch (sensor_id)
+    {
+        case BHY2_SENSOR_ID_ACC_PASS:
+        case BHY2_SENSOR_ID_ACC_RAW:
+        case BHY2_SENSOR_ID_ACC:
+        case BHY2_SENSOR_ID_ACC_BIAS:
+        case BHY2_SENSOR_ID_ACC_BIAS_WU:
+        case BHY2_SENSOR_ID_ACC_WU:
+        case BHY2_SENSOR_ID_ACC_RAW_WU:
+        case BHY2_SENSOR_ID_GYRO_PASS:
+        case BHY2_SENSOR_ID_GYRO_RAW:
+        case BHY2_SENSOR_ID_GYRO:
+        case BHY2_SENSOR_ID_GYRO_BIAS:
+        case BHY2_SENSOR_ID_GYRO_BIAS_WU:
+        case BHY2_SENSOR_ID_GYRO_WU:
+        case BHY2_SENSOR_ID_GYRO_RAW_WU:
+        case BHY2_SENSOR_ID_MAG_PASS:
+        case BHY2_SENSOR_ID_MAG_RAW:
+        case BHY2_SENSOR_ID_MAG:
+        case BHY2_SENSOR_ID_MAG_BIAS:
+        case BHY2_SENSOR_ID_MAG_BIAS_WU:
+        case BHY2_SENSOR_ID_MAG_WU:
+        case BHY2_SENSOR_ID_MAG_RAW_WU:
+        case BHY2_SENSOR_ID_GRA:
+        case BHY2_SENSOR_ID_GRA_WU:
+        case BHY2_SENSOR_ID_LACC:
+        case BHY2_SENSOR_ID_LACC_WU:
+        case BHY2_SENSOR_ID_SI_ACCEL:
+        case BHY2_SENSOR_ID_SI_GYROS:
+            ret = "x,y,z";
+            break;
+        case BHY2_SENSOR_ID_RV:
+        case BHY2_SENSOR_ID_RV_WU:
+        case BHY2_SENSOR_ID_GAMERV:
+        case BHY2_SENSOR_ID_GAMERV_WU:
+        case BHY2_SENSOR_ID_GEORV:
+        case BHY2_SENSOR_ID_GEORV_WU:
+            ret = "x,y,z,w,ar";
+            break;
+        case BHY2_SENSOR_ID_ORI:
+        case BHY2_SENSOR_ID_ORI_WU:
+            ret = "h,p,r";
+            break;
+        case BHY2_SENSOR_ID_TILT_DETECTOR:
+        case BHY2_SENSOR_ID_STD:
+        case BHY2_SENSOR_ID_SIG:
+        case BHY2_SENSOR_ID_WAKE_GESTURE:
+        case BHY2_SENSOR_ID_GLANCE_GESTURE:
+        case BHY2_SENSOR_ID_PICKUP_GESTURE:
+        case BHY2_SENSOR_ID_WRIST_TILT_GESTURE:
+        case BHY2_SENSOR_ID_STATIONARY_DET:
+        case BHY2_SENSOR_ID_MOTION_DET:
+        case BHY2_SENSOR_ID_STD_WU:
+        case BHY2_SENSOR_ID_STD_HW:
+        case BHY2_SENSOR_ID_SIG_HW:
+        case BHY2_SENSOR_ID_STD_HW_WU:
+        case BHY2_SENSOR_ID_SIG_HW_WU:
+        case BHY2_SENSOR_ID_ANY_MOTION:
+        case BHY2_SENSOR_ID_ANY_MOTION_WU:
+            ret = "e";
+            break;
+        case BHY2_SENSOR_ID_STC:
+        case BHY2_SENSOR_ID_STC_WU:
+        case BHY2_SENSOR_ID_STC_HW:
+        case BHY2_SENSOR_ID_STC_HW_WU:
+            ret = "c";
+            break;
+        case BHY2_SENSOR_ID_AR:
+            ret = "a";
+            break;
+        case BHY2_SENSOR_ID_DEVICE_ORI:
+        case BHY2_SENSOR_ID_DEVICE_ORI_WU:
+            ret = "o";
+            break;
+        case BHY2_SENSOR_ID_TEMP:
+        case BHY2_SENSOR_ID_TEMP_WU:
+            ret = "t";
+            break;
+        case BHY2_SENSOR_ID_BARO:
+        case BHY2_SENSOR_ID_BARO_WU:
+            ret = "p";
+            break;
+        case BHY2_SENSOR_ID_HUM:
+        case BHY2_SENSOR_ID_HUM_WU:
+            ret = "h";
+            break;
+        case BHY2_SENSOR_ID_GAS:
+        case BHY2_SENSOR_ID_GAS_WU:
+            ret = "g";
+            break;
+        case BHY2_SENSOR_ID_EXCAMERA:
+            ret = "c";
+            break;
+        case BHY2_SENSOR_ID_GPS:
+            ret = "g";
+            break;
+        case BHY2_SENSOR_ID_LIGHT:
+        case BHY2_SENSOR_ID_LIGHT_WU:
+            ret = "l";
+            break;
+        case BHY2_SENSOR_ID_PROX:
+        case BHY2_SENSOR_ID_PROX_WU:
+            ret = "p";
+            break;
+        case BHY2_SENSOR_ID_KLIO:
+            ret = "lin,lid,lpr,lcr,rin,rid,rc";
+            break;
+        case BHY2_SENSOR_ID_PDR:
+            ret = "x,y,hoa,h,ha,sc,s";
+            break;
+        case BHY2_SENSOR_ID_SWIM:
+            ret = "d,lc,f,br,bu,ba,sc";
+            break;
+        case BHY2_SENSOR_ID_AIR_QUALITY:
+            ret = "t,h,g,i,si,c,v,a";
+            break;
+        default:
+            ret = "";
+    }
+
+    return ret;
+}
+
+char *get_klio_error(bhy2_klio_driver_error_state_t error)
+{
+    char *ret = "";
+
+    switch (error)
+    {
+        case KLIO_DRIVER_ERROR_NONE:
+            break;
+        case KLIO_DRIVER_ERROR_INVALID_PARAMETER:
+            ret = "[Klio error] Invalid parameter";
+            break;
+        case KLIO_DRIVER_ERROR_PARAMETER_OUT_OF_RANGE:
+            ret = "[Klio error] Parameter out of range";
+            break;
+        case KLIO_DRIVER_ERROR_INVALID_PATTERN_OPERATION:
+            ret = "[Klio error] Invalid pattern operation";
+            break;
+        case KLIO_DRIVER_ERROR_NOT_IMPLEMENTED:
+            ret = "[Klio error] Not implemented";
+            break;
+        case KLIO_DRIVER_ERROR_BUFSIZE:
+            ret = "[Klio error] Buffer size";
+            break;
+        case KLIO_DRIVER_ERROR_INTERNAL:
+            ret = "[Klio error] Internal";
+            break;
+        case KLIO_DRIVER_ERROR_UNDEFINED:
+            ret = "[Klio error] Undefined";
+            break;
+        case KLIO_DRIVER_ERROR_OPERATION_PENDING:
+            ret = "[Klio error] Operation pending";
+            break;
+        default:
+            ret = "[Klio error] Unknown error code";
+    }
+
+    return ret;
+}
+
+#ifndef PC
+void default_verbose_write(uint8_t *buffer, uint16_t length)
+{
+    coines_write_intf(COINES_COMM_INTF_USB, buffer, length);
+}
+
+void verbose_write(uint8_t *buffer, uint16_t length) __attribute__ ((weak, alias("default_verbose_write")));
+
+#endif

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -31,7 +31,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * @file    quaternion.c
- * @date    24 Mar 2020
  * @brief   Quaternion data stream example for the BHI260/BHA260
  *
  */
@@ -44,20 +43,24 @@
 #include "bhy2_parse.h"
 #include "common.h"
 
-#include "bhi260ap/Bosch_APP30_SHUTTLE_BHI260_aux_BMM150.fw.h"
+/*#define UPLOAD_FIRMWARE_TO_FLASH */
 
-#define WORK_BUFFER_SIZE   2048
-#if defined (PC)
-#define MAX_READ_WRITE_LEN 44
+#ifdef UPLOAD_FIRMWARE_TO_FLASH
+#include "bhi260ap/BHI260AP_BMM150-flash.fw.h"
 #else
-#define MAX_READ_WRITE_LEN 256
+#include "bhi260ap/BHI260AP_BMM150.fw.h"
 #endif
 
-#define QUAT_SENSOR_ID     BHY2_SENSOR_ID_RV_WU
+#define WORK_BUFFER_SIZE  2048
+
+#define QUAT_SENSOR_ID    BHY2_SENSOR_ID_RV
 
 static void parse_quaternion(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
 static void parse_meta_event(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
 static void print_api_error(int8_t rslt, struct bhy2_dev *dev);
+static void upload_firmware(uint8_t boot_stat, struct bhy2_dev *dev);
+
+enum bhy2_intf intf;
 
 int main(void)
 {
@@ -68,9 +71,19 @@ int main(void)
     uint8_t work_buffer[WORK_BUFFER_SIZE];
     uint8_t hintr_ctrl, hif_ctrl, boot_status;
 
-    setup_interfaces(true, BHY2_SPI_INTERFACE); /* Perform a power on reset */
+#ifdef BHY2_USE_I2C
+    intf = BHY2_I2C_INTERFACE;
+#else
+    intf = BHY2_SPI_INTERFACE;
+#endif
 
-    rslt = bhy2_init(BHY2_SPI_INTERFACE, bhy2_spi_read, bhy2_spi_write, bhy2_delay_us, MAX_READ_WRITE_LEN, NULL, &bhy2);
+    setup_interfaces(true, intf); /* Perform a power on reset */
+
+#ifdef BHY2_USE_I2C
+    rslt = bhy2_init(BHY2_I2C_INTERFACE, bhy2_i2c_read, bhy2_i2c_write, bhy2_delay_us, BHY2_RD_WR_LEN, NULL, &bhy2);
+#else
+    rslt = bhy2_init(BHY2_SPI_INTERFACE, bhy2_spi_read, bhy2_spi_write, bhy2_delay_us, BHY2_RD_WR_LEN, NULL, &bhy2);
+#endif
     print_api_error(rslt, &bhy2);
 
     rslt = bhy2_soft_reset(&bhy2);
@@ -118,29 +131,7 @@ int main(void)
 
     if (boot_status & BHY2_BST_HOST_INTERFACE_READY)
     {
-        uint8_t sensor_error;
-        int8_t temp_rslt;
-        printf("Loading firmware into RAM.\r\n");
-
-        rslt = bhy2_upload_firmware_to_ram(bhy2_firmware_image, sizeof(bhy2_firmware_image), &bhy2);
-        temp_rslt = bhy2_get_error_value(&sensor_error, &bhy2);
-        if (sensor_error)
-        {
-            printf("%s\r\n", get_sensor_error_text(sensor_error));
-        }
-        print_api_error(rslt, &bhy2);
-        print_api_error(temp_rslt, &bhy2);
-
-        printf("Booting from RAM.\r\n");
-
-        rslt = bhy2_boot_from_ram(&bhy2);
-        temp_rslt = bhy2_get_error_value(&sensor_error, &bhy2);
-        if (sensor_error)
-        {
-            printf("%s\r\n", get_sensor_error_text(sensor_error));
-        }
-        print_api_error(rslt, &bhy2);
-        print_api_error(temp_rslt, &bhy2);
+        upload_firmware(boot_status, &bhy2);
 
         rslt = bhy2_get_kernel_version(&version, &bhy2);
         print_api_error(rslt, &bhy2);
@@ -163,7 +154,7 @@ int main(void)
     {
         printf("Host interface not ready. Exiting\r\n");
 
-        close_interfaces();
+        close_interfaces(BHY2_SPI_INTERFACE);
 
         return 0;
     }
@@ -188,7 +179,7 @@ int main(void)
         }
     }
 
-    close_interfaces();
+    close_interfaces(BHY2_SPI_INTERFACE);
 
     return rslt;
 }
@@ -311,6 +302,64 @@ static void print_api_error(int8_t rslt, struct bhy2_dev *dev)
             printf("%s\r\n", get_coines_error(dev->hif.intf_rslt));
             dev->hif.intf_rslt = BHY2_INTF_RET_SUCCESS;
         }
+
         exit(0);
     }
+}
+
+static void upload_firmware(uint8_t boot_stat, struct bhy2_dev *dev)
+{
+    uint8_t sensor_error;
+    int8_t temp_rslt;
+    int8_t rslt = BHY2_OK;
+
+#ifdef UPLOAD_FIRMWARE_TO_FLASH
+    if (boot_stat & BHY2_BST_FLASH_DETECTED)
+    {
+        uint32_t start_addr = BHY2_FLASH_SECTOR_START_ADDR;
+        uint32_t end_addr = start_addr + sizeof(bhy2_firmware_image);
+        printf("Flash detected. Erasing flash to upload firmware\r\n");
+
+        rslt = bhy2_erase_flash(start_addr, end_addr, dev);
+        print_api_error(rslt, dev);
+    }
+    else
+    {
+        printf("Flash not detected\r\n");
+
+        rslt = BHY2_E_IO;
+        print_api_error(rslt, dev);
+    }
+
+    printf("Loading firmware into FLASH.\r\n");
+    rslt = bhy2_upload_firmware_to_flash(bhy2_firmware_image, sizeof(bhy2_firmware_image), dev);
+#else
+    printf("Loading firmware into RAM.\r\n");
+    rslt = bhy2_upload_firmware_to_ram(bhy2_firmware_image, sizeof(bhy2_firmware_image), dev);
+#endif
+    temp_rslt = bhy2_get_error_value(&sensor_error, dev);
+    if (sensor_error)
+    {
+        printf("%s\r\n", get_sensor_error_text(sensor_error));
+    }
+
+    print_api_error(rslt, dev);
+    print_api_error(temp_rslt, dev);
+
+#ifdef UPLOAD_FIRMWARE_TO_FLASH
+    printf("Booting from FLASH.\r\n");
+    rslt = bhy2_boot_from_flash(dev);
+#else
+    printf("Booting from RAM.\r\n");
+    rslt = bhy2_boot_from_ram(dev);
+#endif
+
+    temp_rslt = bhy2_get_error_value(&sensor_error, dev);
+    if (sensor_error)
+    {
+        printf("%s\r\n", get_sensor_error_text(sensor_error));
+    }
+
+    print_api_error(rslt, dev);
+    print_api_error(temp_rslt, dev);
 }

@@ -1,43 +1,44 @@
 /**
- * Copyright (c) 2020 Bosch Sensortec GmbH. All rights reserved.
- *
- * BSD-3-Clause
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * 3. Neither the name of the copyright holder nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
- * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- *
- * @file       bhy2.c
- * @date       2020-03-24
- * @version    v1.3.0
- *
- */
+* Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+*
+* BSD-3-Clause
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
+*
+* 1. Redistributions of source code must retain the above copyright
+*    notice, this list of conditions and the following disclaimer.
+*
+* 2. Redistributions in binary form must reproduce the above copyright
+*    notice, this list of conditions and the following disclaimer in the
+*    documentation and/or other materials provided with the distribution.
+*
+* 3. Neither the name of the copyright holder nor the names of its
+*    contributors may be used to endorse or promote products derived from
+*    this software without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+* "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+* LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+* FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+* COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+* INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+* (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+* IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+* POSSIBILITY OF SUCH DAMAGE.
+*
+* @file       bhy2.c
+* @date       2022-10-17
+* @version    v1.4.1
+*
+*/
 
 #include "bhy2.h"
 #include "bhy2_hif.h"
+#include "bhy2_defs.h"
 
 typedef enum
 {
@@ -65,9 +66,19 @@ static const uint8_t bhy2_sysid_event_size[11] = { 2, 3, 6, 4, 0, 18, 2, 3, 6, 4
 static int8_t parse_fifo(enum bhy2_fifo_type source, struct bhy2_fifo_buffer *fifo_p, struct bhy2_dev *dev);
 static int8_t get_buffer_status(const struct bhy2_fifo_buffer *fifo_p, uint8_t event_size, buffer_status_t *status);
 static int8_t get_time_stamp(enum bhy2_fifo_type source, uint64_t **time_stamp, struct bhy2_dev *dev);
-static int8_t get_callback_info(uint8_t sensor_id,
-                                struct bhy2_fifo_parse_callback_table *info,
-                                const struct bhy2_dev *dev);
+static int8_t get_callback_info(uint8_t sensor_id, struct bhy2_fifo_parse_callback_table *info, struct bhy2_dev *dev);
+
+/*function to check the return values in parse_fifo function*/
+static inline int8_t check_return_value(int8_t result)
+{
+
+    if (result != BHY2_OK)
+    {
+        return result;
+    }
+
+    return BHY2_OK;
+}
 
 int8_t bhy2_get_regs(uint8_t reg_addr, uint8_t *reg_data, uint16_t length, struct bhy2_dev *dev)
 {
@@ -99,6 +110,47 @@ int8_t bhy2_set_regs(uint8_t reg_addr, const uint8_t *reg_data, uint16_t length,
     }
 
     return rslt;
+}
+
+static int8_t bhy2_get_and_process_fifo_support(uint8_t *int_status,
+                                                int8_t *rslt,
+                                                struct bhy2_fifo_buffer *fifo_temp,
+                                                struct bhy2_dev *dev)
+{
+    uint32_t bytes_read = 0;
+    int8_t temp_rslt = BHY2_OK;
+
+    while ((*int_status || fifo_temp->remain_length) && (*rslt == BHY2_OK))
+    {
+        if (((BHY2_IS_INT_FIFO_W(*int_status)) == BHY2_IST_FIFO_W_DRDY) ||
+            ((BHY2_IS_INT_FIFO_W(*int_status)) == BHY2_IST_FIFO_W_LTCY) ||
+            ((BHY2_IS_INT_FIFO_W(*int_status)) == BHY2_IST_FIFO_W_WM) || (fifo_temp->remain_length))
+        {
+
+            /* Reset read_pos to the start of the buffer */
+            fifo_temp->read_pos = 0;
+
+            /* Append data into the work_buffer linked through fifos */
+            *rslt =
+                bhy2_hif_get_wakeup_fifo(&fifo_temp->buffer[fifo_temp->read_length],
+                                         (fifo_temp->buffer_size - fifo_temp->read_length),
+                                         &bytes_read,
+                                         &fifo_temp->remain_length,
+                                         &dev->hif);
+            if (*rslt != BHY2_OK)
+            {
+                return *rslt;
+            }
+
+            fifo_temp->read_length += bytes_read;
+        }
+
+        *rslt = parse_fifo(BHY2_FIFO_TYPE_WAKEUP, fifo_temp, dev);
+        *int_status = 0;
+    }
+
+    return temp_rslt;
+
 }
 
 int8_t bhy2_get_and_process_fifo(uint8_t *work_buffer, uint32_t buffer_size, struct bhy2_dev *dev)
@@ -133,30 +185,11 @@ int8_t bhy2_get_and_process_fifo(uint8_t *work_buffer, uint32_t buffer_size, str
     /* Get and process the Wake up FIFO */
     fifos.read_length = 0;
     int_status = int_status_bak;
-    while ((int_status || fifos.remain_length) && (rslt == BHY2_OK))
+
+    rslt = bhy2_get_and_process_fifo_support(&int_status, &rslt, &fifos, dev);
+    if (rslt != BHY2_OK)
     {
-        if (((BHY2_IS_INT_FIFO_W(int_status)) == BHY2_IST_FIFO_W_DRDY) ||
-            ((BHY2_IS_INT_FIFO_W(int_status)) == BHY2_IST_FIFO_W_LTCY) ||
-            ((BHY2_IS_INT_FIFO_W(int_status)) == BHY2_IST_FIFO_W_WM) || (fifos.remain_length))
-        {
-            /* Reset read_pos to the start of the buffer */
-            fifos.read_pos = 0;
-
-            /* Append data into the work_buffer linked through fifos */
-            rslt = bhy2_hif_get_wakeup_fifo(&fifos.buffer[fifos.read_length],
-                                            (fifos.buffer_size - fifos.read_length),
-                                            &bytes_read,
-                                            &fifos.remain_length,
-                                            &dev->hif);
-            if (rslt != BHY2_OK)
-            {
-                return rslt;
-            }
-            fifos.read_length += bytes_read;
-        }
-
-        rslt = parse_fifo(BHY2_FIFO_TYPE_WAKEUP, &fifos, dev);
-        int_status = 0;
+        return rslt;
     }
 
     /* Get and process the Non Wake-up FIFO */
@@ -181,6 +214,7 @@ int8_t bhy2_get_and_process_fifo(uint8_t *work_buffer, uint32_t buffer_size, str
             {
                 return rslt;
             }
+
             fifos.read_length += bytes_read;
         }
 
@@ -206,6 +240,7 @@ int8_t bhy2_get_and_process_fifo(uint8_t *work_buffer, uint32_t buffer_size, str
             {
                 return rslt;
             }
+
             fifos.read_length += bytes_read;
         }
 
@@ -308,12 +343,12 @@ int8_t bhy2_set_fifo_wmark_wkup(uint32_t watermark, struct bhy2_dev *dev)
 {
     int8_t rslt = BHY2_OK;
     uint32_t bytes_read = 0;
-    uint8_t buffer[16] = { 0 };
+    uint8_t buffer[20] = { 0 };
     uint32_t read_watermark = 0;
 
     if (dev == NULL)
     {
-        rslt = BHY2_E_INVALID_PARAM;
+        rslt = BHY2_E_NULL_PTR;
     }
     else
     {
@@ -322,6 +357,7 @@ int8_t bhy2_set_fifo_wmark_wkup(uint32_t watermark, struct bhy2_dev *dev)
         {
             return rslt;
         }
+
         buffer[0] = (uint8_t)((watermark & 0xFF));
         buffer[1] = (uint8_t)(((watermark >> 8) & 0xFF));
         buffer[2] = (uint8_t)(((watermark >> 16) & 0xFF));
@@ -331,11 +367,13 @@ int8_t bhy2_set_fifo_wmark_wkup(uint32_t watermark, struct bhy2_dev *dev)
         {
             return rslt;
         }
+
         rslt = bhy2_hif_get_parameter(BHY2_PARAM_FIFO_CTRL, buffer, sizeof(buffer), &bytes_read, &dev->hif);
         if (rslt != BHY2_OK)
         {
             return rslt;
         }
+
         read_watermark = BHY2_LE2U32(buffer);
         if (read_watermark != watermark)
         {
@@ -350,7 +388,7 @@ int8_t bhy2_get_fifo_wmark_wkup(uint32_t *watermark, struct bhy2_dev *dev)
 {
     int8_t rslt = 0;
     uint32_t bytes_read = 0;
-    uint8_t buffer[16] = { 0 };
+    uint8_t buffer[20] = { 0 };
 
     if ((dev == NULL) || (watermark == NULL))
     {
@@ -369,7 +407,7 @@ int8_t bhy2_set_fifo_wmark_nonwkup(uint32_t watermark, struct bhy2_dev *dev)
 {
     int8_t rslt = BHY2_OK;
     uint32_t bytes_read = 0;
-    uint8_t buffer[16] = { 0 };
+    uint8_t buffer[20] = { 0 };
     uint32_t read_watermark = 0;
 
     if (dev == NULL)
@@ -383,6 +421,7 @@ int8_t bhy2_set_fifo_wmark_nonwkup(uint32_t watermark, struct bhy2_dev *dev)
         {
             return rslt;
         }
+
         buffer[8] = (uint8_t)((watermark & 0xFF));
         buffer[9] = (uint8_t)(((watermark >> 8) & 0xFF));
         buffer[10] = (uint8_t)(((watermark >> 16) & 0xFF));
@@ -392,12 +431,14 @@ int8_t bhy2_set_fifo_wmark_nonwkup(uint32_t watermark, struct bhy2_dev *dev)
         {
             return rslt;
         }
+
         rslt = bhy2_hif_get_parameter(BHY2_PARAM_FIFO_CTRL, buffer, sizeof(buffer), &bytes_read, &dev->hif);
         if (rslt < 0)
         {
             return rslt;
         }
-        read_watermark = BHY2_LE2U32(buffer);
+
+        read_watermark = BHY2_LE2U32(&buffer[8]);
         if (read_watermark != watermark)
         {
             rslt = BHY2_E_PARAM_NOT_SET;
@@ -411,7 +452,7 @@ int8_t bhy2_get_fifo_wmark_nonwkup(uint32_t *watermark, struct bhy2_dev *dev)
 {
     int8_t rslt = 0;
     uint32_t bytes_read = 0;
-    uint8_t buffer[16] = { 0 };
+    uint8_t buffer[20] = { 0 };
 
     if ((dev == NULL) || (watermark == NULL))
     {
@@ -433,6 +474,22 @@ int8_t bhy2_get_product_id(uint8_t *product_id, struct bhy2_dev *dev)
     if (dev != NULL)
     {
         rslt = bhy2_hif_get_product_id(product_id, &dev->hif);
+    }
+    else
+    {
+        rslt = BHY2_E_NULL_PTR;
+    }
+
+    return rslt;
+}
+
+int8_t bhy2_get_chip_id(uint8_t *chip_id, struct bhy2_dev *dev)
+{
+    int8_t rslt = BHY2_OK;
+
+    if (dev != NULL)
+    {
+        rslt = bhy2_hif_get_chip_id(chip_id, &dev->hif);
     }
     else
     {
@@ -538,14 +595,31 @@ int8_t bhy2_get_host_status(uint8_t *host_status, struct bhy2_dev *dev)
     return rslt;
 }
 
-int8_t bhy2_get_virt_sensor_list(uint8_t *sensor_list, struct bhy2_dev *dev)
+int8_t bhy2_get_feature_status(uint8_t *feat_status, struct bhy2_dev *dev)
+{
+    int8_t rslt = BHY2_OK;
+
+    if (dev != NULL)
+    {
+        rslt = bhy2_hif_get_feature_status(feat_status, &dev->hif);
+    }
+    else
+    {
+        rslt = BHY2_E_NULL_PTR;
+    }
+
+    return rslt;
+}
+
+int8_t bhy2_get_virt_sensor_list(struct bhy2_dev *dev)
 {
     uint32_t bytes_read = 0;
     int8_t rslt = 0;
 
     if (dev != NULL)
     {
-        rslt = bhy2_hif_get_parameter(BHY2_PARAM_SYS_VIRT_SENSOR_PRESENT, sensor_list, 32, &bytes_read, &dev->hif);
+        rslt =
+            bhy2_hif_get_parameter(BHY2_PARAM_SYS_VIRT_SENSOR_PRESENT, dev->present_buff, 32, &bytes_read, &dev->hif);
     }
     else
     {
@@ -613,7 +687,7 @@ int8_t bhy2_erase_flash(uint32_t start_address, uint32_t end_addr, struct bhy2_d
 
     if (dev == NULL)
     {
-        rslt = BHY2_E_INVALID_PARAM;
+        rslt = BHY2_E_NULL_PTR;
     }
     else
     {
@@ -631,7 +705,7 @@ int8_t bhy2_upload_firmware_to_flash(const uint8_t *firmware, uint32_t length, s
 
     if ((dev == NULL) || (firmware == NULL))
     {
-        rslt = BHY2_E_INVALID_PARAM;
+        rslt = BHY2_E_NULL_PTR;
     }
     else
     {
@@ -763,7 +837,7 @@ int8_t bhy2_set_fifo_format_ctrl(uint8_t param, struct bhy2_dev *dev)
 
     if (dev == NULL)
     {
-        rslt = BHY2_E_INVALID_PARAM;
+        rslt = BHY2_E_NULL_PTR;
     }
     else
     {
@@ -858,7 +932,7 @@ int8_t bhy2_soft_passthrough_transfer(union bhy2_soft_passthrough_conf *conf,
     uint32_t bytes_read = 0;
     int8_t rslt = BHY2_OK;
     uint8_t cmd[BHY2_COMMAND_PACKET_LEN] = { 0 };
-    uint8_t tmp_rd_buf[12] = { 0 };
+    uint8_t tmp_rd_buf[BHY2_SPASS_WRITE_RESP_PACKET_LEN] = { 0 };
     uint16_t buffer_size = 0;
 
     if ((dev == NULL) || (conf == NULL) || (reg_data == NULL))
@@ -871,14 +945,15 @@ int8_t bhy2_soft_passthrough_transfer(union bhy2_soft_passthrough_conf *conf,
         conf->conf.reg = reg_addr;
         if (conf->conf.direction == BHY2_SPASS_READ)
         {
-            if ((9 + length) % 4)
+            if ((BHY2_SPASS_READ_PACKET_LEN + length) % 4)
             {
-                buffer_size = (uint16_t)(((9 + length) / 4 + 1) * 4);
+                buffer_size = (uint16_t)(((BHY2_SPASS_READ_PACKET_LEN + length) / 4 + 1) * 4);
             }
             else
             {
-                buffer_size = (uint16_t)(9 + length);
+                buffer_size = (uint16_t)(BHY2_SPASS_READ_PACKET_LEN + length);
             }
+
             if (buffer_size <= BHY2_COMMAND_PACKET_LEN)
             {
                 rslt = bhy2_hif_exec_soft_passthrough(conf->data, 8, cmd, buffer_size, &bytes_read, &dev->hif);
@@ -899,11 +974,17 @@ int8_t bhy2_soft_passthrough_transfer(union bhy2_soft_passthrough_conf *conf,
             {
                 buffer_size = (uint16_t)(8 + length);
             }
+
             if (buffer_size <= BHY2_COMMAND_PACKET_LEN)
             {
                 memcpy(&cmd[0], conf->data, 8);
                 memcpy(&cmd[8], reg_data, length);
-                rslt = bhy2_hif_exec_soft_passthrough(&cmd[0], buffer_size, tmp_rd_buf, 12, &bytes_read, &dev->hif);
+                rslt = bhy2_hif_exec_soft_passthrough(&cmd[0],
+                                                      buffer_size,
+                                                      tmp_rd_buf,
+                                                      sizeof(tmp_rd_buf),
+                                                      &bytes_read,
+                                                      &dev->hif);
             }
             else
             {
@@ -947,7 +1028,7 @@ int8_t bhy2_soft_reset(struct bhy2_dev *dev)
     return rslt;
 }
 
-int8_t bhy2_perform_self_test(uint8_t sensor_id, struct bhy2_self_test_resp *self_test_resp, struct bhy2_dev *dev)
+int8_t bhy2_perform_self_test(uint8_t phys_sensor_id, struct bhy2_self_test_resp *self_test_resp, struct bhy2_dev *dev)
 {
     int8_t rslt = BHY2_OK;
 
@@ -957,13 +1038,13 @@ int8_t bhy2_perform_self_test(uint8_t sensor_id, struct bhy2_self_test_resp *sel
     }
     else
     {
-        rslt = bhy2_hif_do_self_test(sensor_id, self_test_resp, &dev->hif);
+        rslt = bhy2_hif_do_self_test(phys_sensor_id, self_test_resp, &dev->hif);
     }
 
     return rslt;
 }
 
-int8_t bhy2_perform_foc(uint8_t sensor_id, struct bhy2_foc_resp *foc_status, struct bhy2_dev *dev)
+int8_t bhy2_perform_foc(uint8_t phys_sensor_id, struct bhy2_foc_resp *foc_status, struct bhy2_dev *dev)
 {
     int8_t rslt = BHY2_OK;
 
@@ -973,13 +1054,14 @@ int8_t bhy2_perform_foc(uint8_t sensor_id, struct bhy2_foc_resp *foc_status, str
     }
     else
     {
-        rslt = bhy2_hif_do_foc(sensor_id, foc_status, &dev->hif);
+        rslt = bhy2_hif_do_foc(phys_sensor_id, foc_status, &dev->hif);
     }
 
     return rslt;
 }
 
-int8_t bhy2_set_orientation_matrix(uint8_t sensor_id, struct bhy2_orient_matrix orient_matrix, struct bhy2_dev *dev)
+int8_t bhy2_set_orientation_matrix(uint8_t phys_sensor_id, struct bhy2_orient_matrix orient_matrix,
+                                   struct bhy2_dev *dev)
 {
     int8_t rslt = BHY2_OK;
 
@@ -989,13 +1071,15 @@ int8_t bhy2_set_orientation_matrix(uint8_t sensor_id, struct bhy2_orient_matrix 
     }
     else
     {
-        rslt = bhy2_hif_set_orientation_matrix(sensor_id, orient_matrix, &dev->hif);
+        rslt = bhy2_hif_set_orientation_matrix(phys_sensor_id, orient_matrix, &dev->hif);
     }
 
     return rslt;
 }
 
-int8_t bhy2_get_orientation_matrix(uint8_t sensor_id, struct bhy2_orient_matrix *orient_matrix, struct bhy2_dev *dev)
+int8_t bhy2_get_orientation_matrix(uint8_t phys_sensor_id,
+                                   struct bhy2_orient_matrix *orient_matrix,
+                                   struct bhy2_dev *dev)
 {
     int8_t rslt = BHY2_OK;
     struct bhy2_phys_sensor_info phy_sen_info;
@@ -1006,7 +1090,7 @@ int8_t bhy2_get_orientation_matrix(uint8_t sensor_id, struct bhy2_orient_matrix 
     }
     else
     {
-        rslt = bhy2_hif_get_phys_sensor_info(sensor_id, &phy_sen_info, &dev->hif);
+        rslt = bhy2_hif_get_phys_sensor_info(phys_sensor_id, &phy_sen_info, &dev->hif);
 
         /*lint -e702 Info 702: Shift right of signed quantity (int) */
         orient_matrix->c[0] = (int8_t)((phy_sen_info.orientation_matrix[0] & 0x0F) << 4) >> 4;
@@ -1035,7 +1119,7 @@ int8_t bhy2_get_sic_matrix(uint8_t *sic_matrix, uint16_t matrix_len, uint32_t *a
     }
     else
     {
-        rslt = bhy2_hif_get_bsx_state(BHY2_PARAM_SIC, sic_matrix, matrix_len, actual_len, &dev->hif);
+        rslt = bhy2_hif_get_bsx_state(BHY2_PARAM_BSX_SIC, sic_matrix, matrix_len, actual_len, &dev->hif);
     }
 
     return rslt;
@@ -1051,13 +1135,13 @@ int8_t bhy2_set_sic_matrix(const uint8_t *sic_matrix, uint16_t matrix_len, struc
     }
     else
     {
-        rslt = bhy2_hif_set_bsx_state(BHY2_PARAM_SIC, sic_matrix, matrix_len, &dev->hif);
+        rslt = bhy2_hif_set_bsx_state(BHY2_PARAM_BSX_SIC, sic_matrix, matrix_len, &dev->hif);
     }
 
     return rslt;
 }
 
-int8_t bhy2_get_calibration_profile(uint8_t sensor_id,
+int8_t bhy2_get_calibration_profile(uint8_t phy_sensor_id,
                                     uint8_t *calib_prof,
                                     uint16_t prof_len,
                                     uint32_t *actual_len,
@@ -1071,7 +1155,7 @@ int8_t bhy2_get_calibration_profile(uint8_t sensor_id,
     }
     else
     {
-        rslt = bhy2_hif_get_bsx_state((uint16_t)(BHY2_PARAM_CALIB_STATE_BASE | sensor_id),
+        rslt = bhy2_hif_get_bsx_state((uint16_t)(BHY2_PARAM_BSX_CALIB_STATE_BASE | phy_sensor_id),
                                       calib_prof,
                                       prof_len,
                                       actual_len,
@@ -1081,7 +1165,7 @@ int8_t bhy2_get_calibration_profile(uint8_t sensor_id,
     return rslt;
 }
 
-int8_t bhy2_set_calibration_profile(uint8_t sensor_id,
+int8_t bhy2_set_calibration_profile(uint8_t phy_sensor_id,
                                     const uint8_t *calib_prof,
                                     uint16_t prof_len,
                                     struct bhy2_dev *dev)
@@ -1094,7 +1178,7 @@ int8_t bhy2_set_calibration_profile(uint8_t sensor_id,
     }
     else
     {
-        rslt = bhy2_hif_set_bsx_state((uint16_t)(BHY2_PARAM_CALIB_STATE_BASE | sensor_id),
+        rslt = bhy2_hif_set_bsx_state((uint16_t)(BHY2_PARAM_BSX_CALIB_STATE_BASE | phy_sensor_id),
                                       calib_prof,
                                       prof_len,
                                       &dev->hif);
@@ -1150,6 +1234,7 @@ int8_t bhy2_register_fifo_parse_callback(uint8_t sensor_id,
                                          struct bhy2_dev *dev)
 {
     int8_t rslt = BHY2_OK;
+    uint8_t i = 0;
 
     if ((dev == NULL) || (callback == NULL))
     {
@@ -1157,8 +1242,47 @@ int8_t bhy2_register_fifo_parse_callback(uint8_t sensor_id,
     }
     else
     {
-        dev->table[sensor_id].callback = callback;
-        dev->table[sensor_id].callback_ref = callback_ref;
+        for (i = 0; i < BHY2_MAX_SIMUL_SENSORS; i++)
+        {
+            if (dev->table[i].sensor_id == 0)
+            {
+                dev->table[i].sensor_id = sensor_id;
+                dev->table[i].callback = callback;
+                dev->table[i].callback_ref = callback_ref;
+                break;
+            }
+        }
+
+        if (i == BHY2_MAX_SIMUL_SENSORS)
+        {
+            rslt = BHy2_E_INSUFFICIENT_MAX_SIMUL_SENSORS;
+        }
+    }
+
+    return rslt;
+}
+
+int8_t bhy2_deregister_fifo_parse_callback(uint8_t sensor_id, struct bhy2_dev *dev)
+{
+    int8_t rslt = BHY2_OK;
+    uint8_t i = 0;
+
+    if (dev == NULL)
+    {
+        rslt = BHY2_E_NULL_PTR;
+    }
+    else
+    {
+        for (i = 0; i < BHY2_MAX_SIMUL_SENSORS; i++)
+        {
+            if (dev->table[i].sensor_id == sensor_id)
+            {
+                dev->table[i].sensor_id = 0;
+                dev->table[i].callback = NULL;
+                dev->table[i].callback_ref = NULL;
+                break;
+            }
+        }
     }
 
     return rslt;
@@ -1169,7 +1293,6 @@ int8_t bhy2_update_virtual_sensor_list(struct bhy2_dev *dev)
     int8_t rslt;
     uint8_t sensor_id;
     struct bhy2_sensor_info info;
-    uint8_t present_buff[32];
     uint8_t sensor_index;
     uint8_t bit_mask;
 
@@ -1180,18 +1303,18 @@ int8_t bhy2_update_virtual_sensor_list(struct bhy2_dev *dev)
     else
     {
         /* Each bit corresponds to presence of Virtual sensor */
-        rslt = bhy2_get_virt_sensor_list(present_buff, dev);
+        rslt = bhy2_get_virt_sensor_list(dev);
         if (rslt == BHY2_OK)
         {
             /* Padding: Sensor id*/
-            dev->table[0].event_size = 1;
+            dev->event_size[0] = 1;
 
             for (sensor_id = 1; (sensor_id < BHY2_SPECIAL_SENSOR_ID_OFFSET) && (rslt == BHY2_OK); sensor_id++)
             {
                 sensor_index = (uint8_t)(sensor_id / 8);
                 bit_mask = (uint8_t)(0x01 << (sensor_id % 8));
 
-                if (present_buff[sensor_index] & bit_mask)
+                if (dev->present_buff[sensor_index] & bit_mask)
                 {
                     rslt = bhy2_hif_get_sensor_info(sensor_id, &info, &dev->hif);
                     if (rslt == BHY2_OK)
@@ -1203,7 +1326,7 @@ int8_t bhy2_update_virtual_sensor_list(struct bhy2_dev *dev)
                         }
                         else
                         {
-                            dev->table[sensor_id].event_size = info.event_size;
+                            dev->event_size[sensor_id] = info.event_size;
                         }
                     }
                 }
@@ -1211,7 +1334,7 @@ int8_t bhy2_update_virtual_sensor_list(struct bhy2_dev *dev)
 
             for (sensor_id = BHY2_N_VIRTUAL_SENSOR_MAX - 1; sensor_id >= BHY2_SPECIAL_SENSOR_ID_OFFSET; sensor_id--)
             {
-                dev->table[sensor_id].event_size = bhy2_sysid_event_size[sensor_id - BHY2_SPECIAL_SENSOR_ID_OFFSET];
+                dev->event_size[sensor_id] = bhy2_sysid_event_size[sensor_id - BHY2_SPECIAL_SENSOR_ID_OFFSET];
             }
         }
     }
@@ -1285,26 +1408,29 @@ int8_t bhy2_get_error_value(uint8_t *error_value, struct bhy2_dev *dev)
 
 int8_t bhy2_set_data_injection_mode(enum bhy2_data_inj_mode mode, struct bhy2_dev *dev)
 {
-    uint8_t data_inj_payload[6] = { 0 };
+    uint8_t data_inj_payload[8] = { 0 };
     int8_t rslt = BHY2_OK;
-    uint8_t work_buffer[256];
-    uint32_t actual_len;
+    uint8_t work_buffer[256] = { 0 };
+    uint32_t actual_len = 0;
+    uint16_t cmd = BHY2_CMD_SET_INJECT_MODE;
+
+    data_inj_payload[0] = (uint8_t)(cmd & 0xFF);
+    data_inj_payload[1] = (uint8_t)((cmd >> 8) & 0xFF);
+    data_inj_payload[2] = BHY2_DATA_INJECT_MODE_PAYLOAD_LEN;
 
     if (dev != NULL)
     {
 
-        data_inj_payload[0] = 4;
-
         switch (mode)
         {
             case BHY2_NORMAL_MODE:
-                data_inj_payload[2] = 0;
+                data_inj_payload[4] = 0;
                 break;
             case BHY2_REAL_TIME_INJECTION:
-                data_inj_payload[2] = 1;
+                data_inj_payload[4] = 1;
                 break;
             case BHY2_STEP_BY_STEP_INJECTION:
-                data_inj_payload[2] = 2;
+                data_inj_payload[4] = 2;
                 break;
             default:
                 rslt = BHY2_E_INVALID_PARAM;
@@ -1312,7 +1438,12 @@ int8_t bhy2_set_data_injection_mode(enum bhy2_data_inj_mode mode, struct bhy2_de
 
         if (rslt == BHY2_OK)
         {
-            rslt = bhy2_hif_set_inject_data_mode(data_inj_payload, 6, work_buffer, 256, &actual_len, &dev->hif);
+            rslt = bhy2_hif_set_inject_data_mode(data_inj_payload,
+                                                 sizeof (data_inj_payload),
+                                                 work_buffer,
+                                                 256,
+                                                 &actual_len,
+                                                 &dev->hif);
         }
     }
     else
@@ -1323,27 +1454,104 @@ int8_t bhy2_set_data_injection_mode(enum bhy2_data_inj_mode mode, struct bhy2_de
     return rslt;
 }
 
-static int8_t get_callback_info(uint8_t sensor_id,
-                                struct bhy2_fifo_parse_callback_table *info,
-                                const struct bhy2_dev *dev)
+int8_t bhy2_inject_data(const uint8_t *payload, uint32_t payload_len, struct bhy2_dev *dev)
+{
+    return bhy2_hif_inject_data(payload, payload_len, &dev->hif);
+}
+
+uint8_t bhy2_is_sensor_available(uint8_t sensor_id, const struct bhy2_dev *dev)
+{
+    uint8_t offset = sensor_id / 8;
+    uint8_t mask = 1U << (sensor_id & 0x7);
+    uint8_t sensor_present = 0;
+
+    if (dev != NULL)
+    {
+        sensor_present = (dev->present_buff[offset] & mask);
+    }
+
+    return sensor_present;
+}
+
+/**
+ * @brief Function to get the BHy260 variant ID
+ */
+int8_t bhy2_get_variant_id(uint32_t *variant_id, struct bhy2_dev *dev)
+{
+    int8_t rslt;
+    uint8_t cfg_read_command[] = { 0x16, 0x00, 0x00, 0x00 };
+    uint8_t buffer[118] = { 0 };
+
+    rslt = bhy2_soft_reset(dev);
+    if (rslt == BHY2_OK)
+    {
+        rslt = bhy2_set_regs(BHY2_REG_CHAN_CMD, cfg_read_command, sizeof(cfg_read_command), dev);
+
+        /* Give the device some time to prepare data */
+        dev->hif.delay_us(10000, NULL);
+    }
+
+    if (rslt == BHY2_OK)
+    {
+        /* Read status FIFO. First check if response is correct */
+        rslt = bhy2_get_regs(BHY2_REG_CHAN_STATUS, buffer, 4, dev);
+    }
+
+    if (rslt == BHY2_OK)
+    {
+        if (!((buffer[0] == 0x10) && (buffer[1] == 0x00) && (buffer[2] == sizeof(buffer)) && (buffer[3] == 0)))
+        {
+            rslt = BHY2_E_INVALID_PARAM;
+        }
+    }
+
+    if (rslt == BHY2_OK)
+    {
+        /* Read out the configuration */
+        rslt = bhy2_get_regs(BHY2_REG_CHAN_STATUS, buffer, sizeof(buffer), dev);
+        if (rslt == BHY2_OK)
+        {
+            *variant_id = ((uint32_t)buffer[40] << 24) | ((uint32_t)buffer[41] << 16) | ((uint32_t)buffer[42] << 8) |
+                          buffer[43];
+        }
+    }
+
+    return rslt;
+}
+
+static int8_t get_callback_info(uint8_t sensor_id, struct bhy2_fifo_parse_callback_table *info, struct bhy2_dev *dev)
 {
 
     int8_t rslt = BHY2_OK;
+    uint8_t i = 0, j;
 
     if ((dev != NULL) && (info != NULL))
     {
-        *info = dev->table[sensor_id];
-        if ((sensor_id >= BHY2_SPECIAL_SENSOR_ID_OFFSET) && (info->event_size == 0))
+        for (j = 0; j < BHY2_MAX_SIMUL_SENSORS; j++)
         {
-            info->callback = NULL;
-            info->callback_ref = NULL;
-            info->event_size = bhy2_sysid_event_size[sensor_id - BHY2_SPECIAL_SENSOR_ID_OFFSET];
+            if (sensor_id == dev->table[j].sensor_id)
+            {
+                *info = dev->table[j];
+                i = j;
+                break;
+            }
         }
-        if ((sensor_id == 0) && (info->event_size == 0))
+
+        if (i == BHY2_MAX_SIMUL_SENSORS)
         {
-            info->callback = NULL;
-            info->callback_ref = NULL;
-            info->event_size = 1;
+            rslt = BHy2_E_INSUFFICIENT_MAX_SIMUL_SENSORS;
+        }
+        else
+        {
+            if ((sensor_id >= BHY2_SPECIAL_SENSOR_ID_OFFSET) && (dev->event_size[sensor_id] == 0))
+            {
+                dev->event_size[sensor_id] = bhy2_sysid_event_size[sensor_id - BHY2_SPECIAL_SENSOR_ID_OFFSET];
+            }
+
+            if ((sensor_id == 0) && (dev->event_size[sensor_id] == 0))
+            {
+                dev->event_size[sensor_id] = 1;
+            }
         }
     }
     else
@@ -1384,15 +1592,38 @@ static int8_t get_time_stamp(enum bhy2_fifo_type source, uint64_t **time_stamp, 
     return rslt;
 }
 
+static int8_t parse_fifo_support(struct bhy2_fifo_buffer *fifo_buf)
+{
+    uint8_t i;
+
+    if (fifo_buf->read_length)
+    {
+        if (fifo_buf->read_length < fifo_buf->read_pos)
+        {
+            return BHY2_E_INVALID_PARAM;
+        }
+
+        fifo_buf->read_length -= fifo_buf->read_pos;
+        if (fifo_buf->read_length)
+        {
+            for (i = 0; i < fifo_buf->read_length; i++)
+            {
+                fifo_buf->buffer[i] = fifo_buf->buffer[fifo_buf->read_pos + i];
+            }
+        }
+    }
+
+    return BHY2_OK;
+}
+
 static int8_t parse_fifo(enum bhy2_fifo_type source, struct bhy2_fifo_buffer *fifo_p, struct bhy2_dev *dev)
 {
     uint8_t tmp_sensor_id = 0;
     int8_t rslt = BHY2_OK;
-    uint16_t i = 0;
     uint32_t tmp_read_pos;
     struct bhy2_fifo_parse_data_info data_info;
     uint64_t *time_stamp;
-    struct bhy2_fifo_parse_callback_table info;
+    struct bhy2_fifo_parse_callback_table info = { 0 };
     buffer_status_t status = BHY2_BUFFER_STATUS_OK;
 
     for (; (fifo_p->read_pos < fifo_p->read_length) && (status == BHY2_BUFFER_STATUS_OK);)
@@ -1401,10 +1632,7 @@ static int8_t parse_fifo(enum bhy2_fifo_type source, struct bhy2_fifo_buffer *fi
         tmp_sensor_id = fifo_p->buffer[tmp_read_pos];
 
         rslt = get_time_stamp(source, &time_stamp, dev);
-        if (rslt != BHY2_OK)
-        {
-            return rslt;
-        }
+        rslt = check_return_value(rslt);
         switch (tmp_sensor_id)
         {
             case BHY2_SYS_ID_FILLER:
@@ -1414,62 +1642,65 @@ static int8_t parse_fifo(enum bhy2_fifo_type source, struct bhy2_fifo_buffer *fi
             case BHY2_SYS_ID_TS_SMALL_DELTA_WU:
             case BHY2_SYS_ID_TS_SMALL_DELTA:
                 rslt = get_buffer_status(fifo_p, 2, &status);
-                if (rslt != BHY2_OK)
-                {
-                    return rslt;
-                }
+                rslt = check_return_value(rslt);
                 if (status != BHY2_BUFFER_STATUS_OK)
                 {
                     break;
                 }
+
                 *time_stamp += fifo_p->buffer[tmp_read_pos + 1];
                 fifo_p->read_pos += 2;
                 break;
             case BHY2_SYS_ID_TS_LARGE_DELTA:
             case BHY2_SYS_ID_TS_LARGE_DELTA_WU:
                 rslt = get_buffer_status(fifo_p, 3, &status);
-                if (rslt != BHY2_OK)
-                {
-                    return rslt;
-                }
+                rslt = check_return_value(rslt);
+
                 if (status != BHY2_BUFFER_STATUS_OK)
                 {
                     break;
                 }
+
                 *time_stamp += BHY2_LE2U16(fifo_p->buffer + tmp_read_pos + 1);
                 fifo_p->read_pos += 3;
+                break;
+            case BHY2_SYS_ID_BHY2_LOG_DOSTEP:
+                rslt = get_buffer_status(fifo_p, 23, &status);
+                rslt = check_return_value(rslt);
+
+                if (status != BHY2_BUFFER_STATUS_OK)
+                {
+                    break;
+                }
+
+                fifo_p->read_pos += 23;
+
                 break;
             case BHY2_SYS_ID_TS_FULL:
             case BHY2_SYS_ID_TS_FULL_WU:
                 rslt = get_buffer_status(fifo_p, 6, &status);
-                if (rslt != BHY2_OK)
-                {
-                    return rslt;
-                }
+                rslt = check_return_value(rslt);
+
                 if (status != BHY2_BUFFER_STATUS_OK)
                 {
                     break;
                 }
+
                 *time_stamp = BHY2_LE2U40(fifo_p->buffer + tmp_read_pos + UINT8_C(1));
                 fifo_p->read_pos += 6;
                 break;
             default:
-
                 rslt = get_callback_info(tmp_sensor_id, &info, dev);
-
-                if (rslt != BHY2_OK)
-                {
-                    return rslt;
-                }
-                rslt = get_buffer_status(fifo_p, info.event_size, &status);
-                if (rslt != BHY2_OK)
-                {
-                    return rslt;
-                }
+                rslt = check_return_value(rslt);
+                rslt = get_buffer_status(fifo_p, dev->event_size[tmp_sensor_id], &status); /*lint !e838 suppressing
+                                                                                            * previously assigned value
+                                                                                            * not used info */
+                rslt = check_return_value(rslt);
                 if (status != BHY2_BUFFER_STATUS_OK)
                 {
                     break;
                 }
+
                 if (info.callback != NULL)
                 {
                     /* Read position is incremented by 1 to exclude sensor id */
@@ -1477,28 +1708,59 @@ static int8_t parse_fifo(enum bhy2_fifo_type source, struct bhy2_fifo_buffer *fi
                     data_info.fifo_type = source;
                     data_info.time_stamp = time_stamp;
                     data_info.sensor_id = tmp_sensor_id;
-                    data_info.data_size = info.event_size;
+                    data_info.data_size = dev->event_size[tmp_sensor_id];
                     info.callback(&data_info, info.callback_ref);
-
                 }
-                fifo_p->read_pos += info.event_size;
+
+                fifo_p->read_pos += dev->event_size[tmp_sensor_id];
                 break;
         }
     }
-    if (fifo_p->read_length)
+
+    rslt = parse_fifo_support(fifo_p);
+
+    return rslt;
+}
+
+int8_t bhy2_clear_fifo(uint8_t flush_cfg, struct bhy2_dev *dev)
+{
+    int8_t rslt = BHY2_OK;
+    uint8_t buffer[4] = { 0 };
+
+    if (dev != NULL)
     {
-        if (fifo_p->read_length < fifo_p->read_pos)
+        buffer[0] = flush_cfg;
+        rslt = bhy2_hif_exec_cmd(BHY2_CMD_FIFO_FLUSH, buffer, 4, &dev->hif);
+    }
+    else
+    {
+        rslt = BHY2_E_NULL_PTR;
+    }
+
+    return rslt;
+}
+
+int8_t bhy2_read_status(uint16_t *status_code,
+                        uint8_t *status_buff,
+                        uint32_t status_len,
+                        uint32_t *actual_len,
+                        struct bhy2_dev *dev)
+{
+    int8_t rslt = BHY2_OK;
+
+    if (dev != NULL)
+    {
+        rslt = bhy2_hif_wait_status_ready(&dev->hif);
+        if (rslt != BHY2_OK)
         {
-            return BHY2_E_INVALID_PARAM;
+            return rslt;
         }
-        fifo_p->read_length -= fifo_p->read_pos;
-        if (fifo_p->read_length)
-        {
-            for (i = 0; i < fifo_p->read_length; i++)
-            {
-                fifo_p->buffer[i] = fifo_p->buffer[fifo_p->read_pos + i];
-            }
-        }
+
+        rslt = bhy2_hif_get_status_fifo(status_code, status_buff, status_len, actual_len, &dev->hif);
+    }
+    else
+    {
+        rslt = BHY2_E_NULL_PTR;
     }
 
     return rslt;

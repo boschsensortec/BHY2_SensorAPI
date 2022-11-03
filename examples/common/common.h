@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -31,7 +31,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * @file    common.h
- * @date    24 Mar 2020
  * @brief   Common header file for the BHI260/BHA260 examples
  *
  */
@@ -42,18 +41,40 @@
 #include <stdbool.h>
 
 #include "bhy2.h"
+#include "bhy2_klio.h"
+#include "bhy2_pdr.h"
+#include "bhy2_swim.h"
+#include "bhy2_bsec.h"
 #include "coines.h"
 
-#define BHY260_CS_PIN  COINES_SHUTTLE_PIN_7
-#define BHY260_INT_PIN COINES_SHUTTLE_PIN_21
+#define BHY260_APP20_CS_PIN     COINES_SHUTTLE_PIN_7
+#define BHY260_APP20_INT_PIN    COINES_SHUTTLE_PIN_21
+#define BHY260_APP20_RESET_PIN  COINES_SHUTTLE_PIN_8
+#define BHY260_APP30_CS_PIN     COINES_MINI_SHUTTLE_PIN_2_1
+#define BHY260_APP30_INT_PIN    COINES_MINI_SHUTTLE_PIN_1_6
+#define BHY260_APP30_RESET_PIN  COINES_MINI_SHUTTLE_PIN_2_6
+
+#ifdef PC
+#ifdef COINES_BRIDGE
+#define BHY2_RD_WR_LEN          256    /* Coines bridge maximum read write length */
+#else
+#define BHY2_RD_WR_LEN          44     /* USB maximum read write length(DD firmware) */
+#endif
+#else
+#define BHY2_RD_WR_LEN          256    /* MCU maximum read write length */
+#endif
 
 char *get_coines_error(int16_t rslt);
 char *get_api_error(int8_t error_code);
 char *get_sensor_error_text(uint8_t sensor_error);
 char *get_sensor_name(uint8_t sensor_id);
+float get_sensor_default_scaling(uint8_t sensor_id);
+char *get_sensor_parse_format(uint8_t sensor_id);
+char *get_sensor_axis_names(uint8_t sensor_id);
+char *get_klio_error(bhy2_klio_driver_error_state_t error);
 
 void setup_interfaces(bool reset_power, enum bhy2_intf intf);
-void close_interfaces(void);
+void close_interfaces(enum bhy2_intf intf);
 int8_t bhy2_spi_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t length, void *intf_ptr);
 int8_t bhy2_spi_write(uint8_t reg_addr, const uint8_t *reg_data, uint32_t length, void *intf_ptr);
 int8_t bhy2_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t length, void *intf_ptr);

@@ -1,40 +1,40 @@
 /**
- * Copyright (c) 2020 Bosch Sensortec GmbH. All rights reserved.
- *
- * BSD-3-Clause
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * 3. Neither the name of the copyright holder nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
- * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- *
- * @file       bhy2_hif.h
- * @date       2020-03-24
- * @version    v1.3.0
- *
- */
+* Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+*
+* BSD-3-Clause
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
+*
+* 1. Redistributions of source code must retain the above copyright
+*    notice, this list of conditions and the following disclaimer.
+*
+* 2. Redistributions in binary form must reproduce the above copyright
+*    notice, this list of conditions and the following disclaimer in the
+*    documentation and/or other materials provided with the distribution.
+*
+* 3. Neither the name of the copyright holder nor the names of its
+*    contributors may be used to endorse or promote products derived from
+*    this software without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+* "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+* LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+* FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+* COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+* INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+* (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+* IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+* POSSIBILITY OF SUCH DAMAGE.
+*
+* @file       bhy2_hif.h
+* @date       2022-10-17
+* @version    v1.4.1
+*
+*/
 
 #ifndef __BHY2_HIF_H__
 #define __BHY2_HIF_H__
@@ -183,6 +183,14 @@ int8_t bhy2_hif_boot_from_flash(struct bhy2_hif_dev *hif);
 int8_t bhy2_hif_get_product_id(uint8_t *product_id, struct bhy2_hif_dev *hif);
 
 /**
+ * @brief Function to get the chip ID
+ * @param[out] chip_id  : Reference to the data buffer to store the chip ID
+ * @param[in] hif       : HIF device reference
+ * @return API error codes
+ */
+int8_t bhy2_hif_get_chip_id(uint8_t *chip_id, struct bhy2_hif_dev *hif);
+
+/**
  * @brief Function to get the ROM version
  * @param[out] rom_version  : Reference to the data buffer to store the ROM version
  * @param[in] hif           : HIF device reference
@@ -221,6 +229,14 @@ int8_t bhy2_hif_get_boot_status(uint8_t *boot_status, struct bhy2_hif_dev *hif);
  * @return API error codes
  */
 int8_t bhy2_hif_get_host_status(uint8_t *host_status, struct bhy2_hif_dev *hif);
+
+/**
+ * @brief Function to get the feature status
+ * @param[out] feat_status  : Reference to the data buffer to store the feature status
+ * @param[in] hif           : HIF device reference
+ * @return API error codes
+ */
+int8_t bhy2_hif_get_feature_status(uint8_t *feat_status, struct bhy2_hif_dev *hif);
 
 /**
  * @brief Function get the interrupt status
@@ -359,21 +375,23 @@ int8_t bhy2_hif_set_fifo_flush(uint8_t sensor_id, struct bhy2_hif_dev *hif);
 
 /**
  * @brief Function to perform a self-test for a particular virtual sensor
- * @param[in] sensor_id         : Sensor ID of the virtual sensor
+ * @param[in] phys_sensor_id    : Physical sensor ID of the virtual sensor
  * @param[out] self_test_resp   : Reference to the data buffer to store the self-test response
  * @param[in] hif               : HIF device reference
  * @return API error codes
  */
-int8_t bhy2_hif_do_self_test(uint8_t sensor_id, struct bhy2_self_test_resp *self_test_resp, struct bhy2_hif_dev *hif);
+int8_t bhy2_hif_do_self_test(uint8_t phys_sensor_id,
+                             struct bhy2_self_test_resp *self_test_resp,
+                             struct bhy2_hif_dev *hif);
 
 /**
  * @brief Function to perform a fast offset compensation for a particular virtual sensor
- * @param[in] sensor_id : Sensor ID of the virtual sensor
- * @param[out] foc_resp : Reference to the data buffer to store the FOC response
- * @param[in] hif       : HIF device reference
+ * @param[in] phys_sensor_id : Physical Sensor ID of the virtual sensor
+ * @param[out] foc_resp      : Reference to the data buffer to store the FOC response
+ * @param[in] hif            : HIF device reference
  * @return API error codes
  */
-int8_t bhy2_hif_do_foc(uint8_t sensor_id, struct bhy2_foc_resp *foc_resp, struct bhy2_hif_dev *hif);
+int8_t bhy2_hif_do_foc(uint8_t phys_sensor_id, struct bhy2_foc_resp *foc_resp, struct bhy2_hif_dev *hif);
 
 /**
  * @brief Function to get the sensor control configuration of a virtual sensor
@@ -529,9 +547,9 @@ int8_t bhy2_hif_set_orientation_matrix(uint8_t sensor_id,
  */
 int8_t bhy2_hif_set_inject_data_mode(const uint8_t *payload,
                                      uint8_t payload_len,
-                                     uint8_t *work_buf,
+                                     const uint8_t *work_buf,
                                      uint32_t work_buf_len,
-                                     uint32_t *actual_len,
+                                     const uint32_t *actual_len,
                                      struct bhy2_hif_dev *hif);
 
 /**
@@ -542,6 +560,13 @@ int8_t bhy2_hif_set_inject_data_mode(const uint8_t *payload,
  * @return API error codes
  */
 int8_t bhy2_hif_inject_data(const uint8_t *payload, uint32_t payload_len, struct bhy2_hif_dev *hif);
+
+/**
+ * @brief Function to wait till status is ready
+ * @param[in] hif           : HIF device reference
+ * @return API error codes
+ */
+int8_t bhy2_hif_wait_status_ready(struct bhy2_hif_dev *hif);
 
 #ifdef __cplusplus
 }

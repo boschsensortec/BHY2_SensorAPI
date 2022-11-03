@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -31,7 +31,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * @file    load_firmware.c
- * @date    24 Mar 2020
  * @brief   Example to load firmware for the BHI260/BHA260
  *
  */
@@ -44,22 +43,19 @@
 #include "bhy2_parse.h"
 #include "common.h"
 
-#define UPLOAD_FIRMWARE_TO_FLASH
+/*#define UPLOAD_FIRMWARE_TO_FLASH */
 
 #ifdef UPLOAD_FIRMWARE_TO_FLASH
-#include "bhi260ap/Bosch_APP30_SHUTTLE_BHI260-flash.fw.h"
-#else
-#include "bhi260ap/Bosch_APP30_SHUTTLE_BHI260.fw.h"
-#endif
 
-#if defined (PC)
-#define MAX_READ_WRITE_LEN 44
+#include "bhi260ap/BHI260AP-flash.fw.h"
 #else
-#define MAX_READ_WRITE_LEN 256
+#include "bhi260ap/BHI260AP.fw.h"
 #endif
 
 static void print_api_error(int8_t rslt, struct bhy2_dev *dev);
 static int8_t upload_firmware(struct bhy2_dev *dev);
+
+enum bhy2_intf intf;
 
 /*
  * For use-cases where the whole firmware cannot be accessed
@@ -80,9 +76,19 @@ int main(void)
 
     uint8_t hintr_ctrl, hif_ctrl, boot_status;
 
-    setup_interfaces(true, BHY2_SPI_INTERFACE); /* Perform a power on reset */
+#ifdef BHY2_USE_I2C
+    intf = BHY2_I2C_INTERFACE;
+#else
+    intf = BHY2_SPI_INTERFACE;
+#endif
 
-    rslt = bhy2_init(BHY2_SPI_INTERFACE, bhy2_spi_read, bhy2_spi_write, bhy2_delay_us, MAX_READ_WRITE_LEN, NULL, &bhy2);
+    setup_interfaces(true, intf); /* Perform a power on reset */
+
+#ifdef BHY2_USE_I2C
+    rslt = bhy2_init(BHY2_I2C_INTERFACE, bhy2_i2c_read, bhy2_i2c_write, bhy2_delay_us, BHY2_RD_WR_LEN, NULL, &bhy2);
+#else
+    rslt = bhy2_init(BHY2_SPI_INTERFACE, bhy2_spi_read, bhy2_spi_write, bhy2_delay_us, BHY2_RD_WR_LEN, NULL, &bhy2);
+#endif
     print_api_error(rslt, &bhy2);
 
     rslt = bhy2_soft_reset(&bhy2);
@@ -139,6 +145,7 @@ int main(void)
 
             return 0;
         }
+
 #endif
 
         rslt = upload_firmware(&bhy2);
@@ -147,6 +154,7 @@ int main(void)
         {
             printf("%s\r\n", get_sensor_error_text(sensor_error));
         }
+
         print_api_error(rslt, &bhy2);
         print_api_error(temp_rslt, &bhy2);
 
@@ -163,6 +171,7 @@ int main(void)
         {
             printf("%s\r\n", get_sensor_error_text(sensor_error));
         }
+
         print_api_error(rslt, &bhy2);
         print_api_error(temp_rslt, &bhy2);
 
@@ -177,12 +186,12 @@ int main(void)
     {
         printf("Host interface not ready. Exiting\r\n");
 
-        close_interfaces();
+        close_interfaces(BHY2_SPI_INTERFACE);
 
         return 0;
     }
 
-    close_interfaces();
+    close_interfaces(BHY2_SPI_INTERFACE);
 
     return rslt;
 }
@@ -197,6 +206,7 @@ static void print_api_error(int8_t rslt, struct bhy2_dev *dev)
             printf("%s\r\n", get_coines_error(dev->hif.intf_rslt));
             dev->hif.intf_rslt = BHY2_INTF_RET_SUCCESS;
         }
+
         exit(0);
     }
 }
@@ -222,6 +232,7 @@ static int8_t upload_firmware(struct bhy2_dev *dev)
                 incr = ((incr >> 2) + 1) << 2;
             }
         }
+
 #ifdef UPLOAD_FIRMWARE_TO_FLASH
         rslt = bhy2_upload_firmware_to_flash_partly(&bhy2_firmware_image[i], i, incr, dev);
 #else
@@ -230,6 +241,7 @@ static int8_t upload_firmware(struct bhy2_dev *dev)
 
         printf("%.2f%% complete\r", (float)(i + incr) / (float)len * 100.0f);
     }
+
     printf("\n");
 
     return rslt;

@@ -1,40 +1,40 @@
 /**
- * Copyright (c) 2020 Bosch Sensortec GmbH. All rights reserved.
- *
- * BSD-3-Clause
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * 3. Neither the name of the copyright holder nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
- * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- *
- * @file       bhy2.h
- * @date       2020-03-24
- * @version    v1.3.0
- *
- */
+* Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+*
+* BSD-3-Clause
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
+*
+* 1. Redistributions of source code must retain the above copyright
+*    notice, this list of conditions and the following disclaimer.
+*
+* 2. Redistributions in binary form must reproduce the above copyright
+*    notice, this list of conditions and the following disclaimer in the
+*    documentation and/or other materials provided with the distribution.
+*
+* 3. Neither the name of the copyright holder nor the names of its
+*    contributors may be used to endorse or promote products derived from
+*    this software without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+* "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+* LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+* FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+* COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+* INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+* (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+* IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+* POSSIBILITY OF SUCH DAMAGE.
+*
+* @file       bhy2.h
+* @date       2022-10-17
+* @version    v1.4.1
+*
+*/
 
 #ifndef __BHY2_H__
 #define __BHY2_H__
@@ -93,6 +93,14 @@ int8_t bhy2_set_regs(uint8_t reg_addr, const uint8_t *reg_data, uint16_t length,
 int8_t bhy2_get_product_id(uint8_t *product_id, struct bhy2_dev *dev);
 
 /**
+ * @brief Function to get the chip ID
+ * @param[out] chip_id  : Reference to data buffer to store the chip ID
+ * @param[in] dev       : Device reference
+ * @return API error codes
+ */
+int8_t bhy2_get_chip_id(uint8_t *chip_id, struct bhy2_dev *dev);
+
+/**
  * @brief Function to get the revision ID
  * @param[out] revision_id  : Reference to data buffer to store the revision ID
  * @param[in] dev           : Device reference
@@ -141,12 +149,19 @@ int8_t bhy2_get_boot_status(uint8_t *boot_status, struct bhy2_dev *dev);
 int8_t bhy2_get_host_status(uint8_t *host_status, struct bhy2_dev *dev);
 
 /**
- * @brief Function to get the virtual sensor list
- * @param[out] sensor_list  : Reference to the 32byte data buffer that stores the sensor list as a bit format
+ * @brief Function to get the feature status
+ * @param[out] feat_status  : Reference to the data buffer to store the feature status
  * @param[in] dev           : Device reference
  * @return API error codes
  */
-int8_t bhy2_get_virt_sensor_list(uint8_t *sensor_list, struct bhy2_dev *dev);
+int8_t bhy2_get_feature_status(uint8_t *feat_status, struct bhy2_dev *dev);
+
+/**
+ * @brief Function to get the virtual sensor list  and store in the device structure
+ * @param[in] dev           : Device reference
+ * @return API error codes
+ */
+int8_t bhy2_get_virt_sensor_list(struct bhy2_dev *dev);
 
 /**
  * @brief Function to get the virtual sensor configuration
@@ -392,39 +407,42 @@ int8_t bhy2_soft_reset(struct bhy2_dev *dev);
 
 /**
  * @brief Function to perform a self test of a virtual sensor
- * @param[in] sensor_id         : Sensor ID of the virtual sensor
+ * @param[in] phys_sensor_id    : Physical sensor ID of the virtual sensor
  * @param[out] self_test_resp   : Reference to the data buffer to store the self test response from the virtual sensor
  * @param[in] dev               : Device reference
  * @return API error codes
  */
-int8_t bhy2_perform_self_test(uint8_t sensor_id, struct bhy2_self_test_resp *self_test_resp, struct bhy2_dev *dev);
+int8_t bhy2_perform_self_test(uint8_t phys_sensor_id, struct bhy2_self_test_resp *self_test_resp, struct bhy2_dev *dev);
 
 /**
  * @brief Function to perform a fast offset compensation of a virtual sensor
- * @param[in] sensor_id         : Sensor ID of the virtual sensor
+ * @param[in] phys_sensor_id    : Physical Sensor ID of the virtual sensor
  * @param[out] self_test_resp   : Reference to the data buffer to store the FOC response from the virtual sensor
  * @param[in] dev               : Device reference
  * @return API error codes
  */
-int8_t bhy2_perform_foc(uint8_t sensor_id, struct bhy2_foc_resp *foc_resp, struct bhy2_dev *dev);
+int8_t bhy2_perform_foc(uint8_t phys_sensor_id, struct bhy2_foc_resp *foc_resp, struct bhy2_dev *dev);
 
 /**
  * @brief Function to set the orientation matrix of a physical sensor
- * @param[in] sensor_id     : Sensor ID of the virtual sensor
- * @param[in] orient_matrix : Orientation matrix
- * @param[in] dev           : Device reference
+ * @param[in] phys_sensor_id : Sensor ID of the virtual sensor
+ * @param[in] orient_matrix  : Orientation matrix
+ * @param[in] dev            : Device reference
  * @return API error codes
  */
-int8_t bhy2_set_orientation_matrix(uint8_t sensor_id, struct bhy2_orient_matrix orient_matrix, struct bhy2_dev *dev);
+int8_t bhy2_set_orientation_matrix(uint8_t phys_sensor_id, struct bhy2_orient_matrix orient_matrix,
+                                   struct bhy2_dev *dev);
 
 /**
  * @brief Function to get the orientation matrix of a physical sensor
- * @param[in] sensor_id         : Sensor ID of the virtual sensor
- * @param[out] orient_matrix    : Reference to the data buffer to the store the orientation matrix
- * @param[in] dev               : Device reference
+ * @param[in] phys_sensor_id : Sensor ID of the virtual sensor
+ * @param[out] orient_matrix : Reference to the data buffer to the store the orientation matrix
+ * @param[in] dev            : Device reference
  * @return API error codes
  */
-int8_t bhy2_get_orientation_matrix(uint8_t sensor_id, struct bhy2_orient_matrix *orient_matrix, struct bhy2_dev *dev);
+int8_t bhy2_get_orientation_matrix(uint8_t phys_sensor_id,
+                                   struct bhy2_orient_matrix *orient_matrix,
+                                   struct bhy2_dev *dev);
 
 /**
  * @brief Function to set the Soft Iron Correction matrix
@@ -447,14 +465,14 @@ int8_t bhy2_get_sic_matrix(uint8_t *sic_matrix, uint16_t matrix_len, uint32_t *a
 
 /**
  * @brief Function to get the calibration profile of a BSX virtual sensor
- * @param[in] sensor_id     : Sensor ID of the virtual sensor
+ * @param[in] phys_sensor_id: Physical Sensor ID of the virtual sensor
  * @param[out] calib_prof   : Reference to the data buffer to store the calibration profile
  * @param[in] prof_len      : Length of the data buffer
  * @param[out] actual_len   : Actual length of the calibration profile
  * @param[in] dev           : Device reference
  * @return API error codes
  */
-int8_t bhy2_get_calibration_profile(uint8_t sensor_id,
+int8_t bhy2_get_calibration_profile(uint8_t phys_sensor_id,
                                     uint8_t *calib_prof,
                                     uint16_t prof_len,
                                     uint32_t *actual_len,
@@ -462,13 +480,13 @@ int8_t bhy2_get_calibration_profile(uint8_t sensor_id,
 
 /**
  * @brief Function to set the calibration profile of a BSX virtual sensor
- * @param[in] sensor_id     : Sensor ID of the virtual sensor
+ * @param[in] phys_sensor_id: Physical Sensor ID of the virtual sensor
  * @param[in] calib_prof    : Reference to the data buffer storing the calibration profile
  * @param[in] prof_len      : Length of the profil
  * @param[in] dev           : Device reference
  * @return API error codes
  */
-int8_t bhy2_set_calibration_profile(uint8_t sensor_id,
+int8_t bhy2_set_calibration_profile(uint8_t phys_sensor_idv,
                                     const uint8_t *calib_prof,
                                     uint16_t prof_len,
                                     struct bhy2_dev *dev);
@@ -484,8 +502,8 @@ int8_t bhy2_set_calibration_profile(uint8_t sensor_id,
 int8_t bhy2_get_post_mortem_data(uint8_t *post_mortem, uint32_t buffer_len, uint32_t *actual_len, struct bhy2_dev *dev);
 
 /**
- * @brief Function to link a callback and relevant reference when the sensor event is available in teh FIFO
- * @param[in] sensor_id     : Sensor ID of the virtal sensor
+ * @brief Function to link a callback and relevant reference when the sensor event is available in the FIFO
+ * @param[in] sensor_id     : Sensor ID of the virtual sensor
  * @param[in] callback      : Reference of the callback function
  * @param[in] callback_ref  : Reference needed inside the callback function. Can be NULL
  * @param[in] dev           : Device reference
@@ -495,6 +513,14 @@ int8_t bhy2_register_fifo_parse_callback(uint8_t sensor_id,
                                          bhy2_fifo_parse_callback_t callback,
                                          void *callback_ref,
                                          struct bhy2_dev *dev);
+
+/**
+ * @brief Function to unlink a callback and relevant reference
+ * @param[in] sensor_id     : Sensor ID of the virtual sensor
+ * @param[in] dev           : Device reference
+ * @return API error codes
+ */
+int8_t bhy2_deregister_fifo_parse_callback(uint8_t sensor_id, struct bhy2_dev *dev);
 
 /**
  * @brief Function to update the callback table's information
@@ -560,7 +586,63 @@ int8_t bhy2_soft_passthrough_transfer(union bhy2_soft_passthrough_conf *conf,
                                       uint8_t *reg_data,
                                       struct bhy2_dev *dev);
 
+/**
+ * @brief Function to check if a virtual sensor is available
+ * @param[in] sensor_id     : Sensor ID of the virtual sensor
+ * @param[in] dev           : Device reference
+ * @return 1 if the sensor is available. 0 otherwise
+ */
+uint8_t bhy2_is_sensor_available(uint8_t sensor_id, const struct bhy2_dev *dev);
+
+/**
+ * @brief Function to get the BHy260 variant ID
+ *
+ * @param[in] variant_id : Reference to store the variant ID
+ * @param[in] dev        : Device reference
+ * @return int8_t API error codes
+ */
+int8_t bhy2_get_variant_id(uint32_t *variant_id, struct bhy2_dev *dev);
+
+/**
+ * @brief Function to inject data
+ * @param[in] payload       : Reference to the data buffer
+ * @param[in] payload_len   : Length of the data buffer
+ * @param[in] dev           : Device reference
+ * @return API error codes
+ */
+
+int8_t bhy2_inject_data(const uint8_t *payload, uint32_t payload_len, struct bhy2_dev *dev);
+
+/**
+ * @brief Function to set inject mode
+ * @param[in] mode       : Type of data inject mode
+ * @param[in] dev        : Device reference
+ * @return API error codes
+ */
 int8_t bhy2_set_data_injection_mode(enum bhy2_data_inj_mode mode, struct bhy2_dev *dev);
+
+/**
+* @brief Function to clear the FIFO
+* @param[in] flush_cfg  : Type of FIFO Flush
+* @param[in] dev        : Device reference
+* @return API error codes
+*/
+int8_t bhy2_clear_fifo(uint8_t flush_cfg, struct bhy2_dev *dev);
+
+/**
+* @brief Function to read the status FIFO
+* @param[out] status_code  : Status Code
+* @param[in] status_buff   : Buffer for reading Status Response
+* @param[in] status_len    : Length of the Response
+* @param[out] actual_len   : Length of Data read
+* @param[in] dev           : Device reference
+* @return API error codes
+*/
+int8_t bhy2_read_status(uint16_t *status_code,
+                        uint8_t *status_buff,
+                        uint32_t status_len,
+                        uint32_t *actual_len,
+                        struct bhy2_dev *dev);
 
 #ifdef __cplusplus
 }

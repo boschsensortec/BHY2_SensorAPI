@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -31,17 +31,17 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * @file    fw2h.c
- * @date    24 Mar 2020
  * @brief   Quaternion data stream example for the BHI260/BHA260
  *
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <stddef.h>
 
-#define N_ROWS 12
+#define N_ROWS  12
 
+/*lint -e818 suppressing parameter(argv) could be declared as pointer to constant info as the info is not addressed
+ * after declaring the parameter as pointer to constant */
 int main(int argc, char *argv[])
 {
     FILE *input_file, *output_file;
@@ -71,14 +71,15 @@ int main(int argc, char *argv[])
                     unsigned char j = 0;
                     do
                     {
-                        bytes_read = fread(fw, 1, N_ROWS, input_file);
+                        bytes_read = (uint8_t)fread(fw, 1, N_ROWS, input_file);
                         if (bytes_read)
                         {
                             fprintf(output_file, "  ");
                             for (j = 0; j < bytes_read; j++)
                             {
-                                fprintf(output_file, "0x%x, ", fw[j]);
+                                fprintf(output_file, "0x%02x, ", fw[j]);
                             }
+
                             fprintf(output_file, "\n");
                         }
                     } while (bytes_read != 0);
@@ -94,7 +95,10 @@ int main(int argc, char *argv[])
             {
                 printf("Could not open %s.\n", argv[i]);
             }
+
             fclose(input_file);
         }
     }
 }
+
+/*lint +e818*/
