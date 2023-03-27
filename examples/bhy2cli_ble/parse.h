@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *

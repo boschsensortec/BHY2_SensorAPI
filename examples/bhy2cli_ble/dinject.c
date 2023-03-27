@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -41,27 +41,130 @@
 #include "verbose.h"
 #include "coines.h"
 
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+
 #include <sys/stat.h>
 #include "dinject.h"
+
+#define DI_PARSE_ERROR    -1
+#define DI_PARSE_SUCCESS  1
+
+uint32_t pos = 0;
+uint8_t inject_log[MAX_SAMPLE_LENGTH] = { 0 };
+uint16_t event_size = 0;
+uint16_t len = 0;
+
+/*******************************************************************************/
+int dinject_hex_to_dec(char *hex, uint8_t len)
+{
+    int hex_val = 0, dec_val = 0, exponent = 0;
+
+    for (int i = len - 1; i >= 0; --i)
+    {
+        if (hex[i] >= '0' && hex[i] <= '9')
+        {
+            hex_val = hex[i] - '0';
+        }
+        else if ((hex[i] >= 'A' && hex[i] <= 'F') || (hex[i] >= 'a' && hex[i] <= 'f'))
+        {
+            switch (hex[i])
+            {
+                case 'A':
+                case 'a':
+                    hex_val = 10;
+                    break;
+                case 'B':
+                case 'b':
+                    hex_val = 11;
+                    break;
+                case 'C':
+                case 'c':
+                    hex_val = 12;
+                    break;
+                case 'D':
+                case 'd':
+                    hex_val = 13;
+                    break;
+                case 'E':
+                case 'e':
+                    hex_val = 14;
+                    break;
+                case 'F':
+                case 'f':
+                    hex_val = 15;
+                    break;
+            }
+        }
+
+        dec_val = dec_val + hex_val * pow(16, exponent);
+        ++exponent;
+    }
+
+    return dec_val;
+}
+
+int8_t dinject_parse_file(FILE *fp, size_t hex_len, size_t event_size, uint8_t int_stream[])
+{
+    char char_string[8];
+    char single_char;
+    int i = 0;
+    size_t string_len = 0;
+    size_t data_size = hex_len - 1;
+    size_t num_elements = 1;
+
+    while (event_size > 0)
+    {
+        single_char = fgetc(fp);
+
+        if ((single_char == ' ') || (single_char == '\r') || (single_char == '\n'))
+        {
+            continue;
+        }
+        else
+        {
+            if (single_char != EOF)
+            {
+                char_string[0] = single_char;
+                string_len = fread(&char_string[1], data_size, num_elements, fp);
+                if (string_len != num_elements)
+                {
+                    return DI_PARSE_ERROR;
+                }
+
+                int_stream[i] = dinject_hex_to_dec(char_string, hex_len);
+                memset(char_string, 0, sizeof(char_string));
+                i++;
+                event_size = event_size - 1;
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
+
+    return DI_PARSE_SUCCESS;
+}
+
+/*******************************************************************************/
 
 /**
 * @brief Function to initialize Data Injection structure
 */
-int8_t dinject_init(uint8_t id, char *input, struct data_inject *dinject, struct bhy2_dev *bhy2)
+int8_t dinject_init(char *input, struct data_inject *dinject, struct bhy2_dev *bhy2)
 {
-    struct bhy2_sensor_info bhy2_sensor_info_t;
     struct stat st;
     int8_t rslt = BHY2_OK;
 
-    /*! Read the Sensor Info */
-    rslt = bhy2_get_sensor_info(id, &bhy2_sensor_info_t, bhy2);
-    if (rslt != BHY2_OK)
-    {
-        return rslt;
-    }
-
     /*! Open the Field Log*/
+#ifdef PC
+    dinject->in_log_ptr = fopen(input, "rb");
+#else
     dinject->in_log_ptr = fopen(input, "r");
+#endif
+
     if (!dinject->in_log_ptr)
     {
         ERROR("Could not open file %s\r\n\r\n", input);
@@ -76,111 +179,178 @@ int8_t dinject_init(uint8_t id, char *input, struct data_inject *dinject, struct
     /*! Compute the File size */
     stat((char*)input, &st);
     dinject->file_size = st.st_size;
+    PRINT("File Size : %ld\r\n", dinject->file_size);
 
-    /*! Initialize the Data Injection Structure*/
-    dinject->file_size = dinject->file_size - LINE_LENGTH(TIMESTAMP_LENGTH); /*subtracting 19, size of first line time
-                                                                              * stamp-> */
-    dinject->sensor_data_size = bhy2_sensor_info_t.event_size + 2;
-    dinject->sensor_block_size = MAX_SAMPLES_PER_BLOCK * dinject->sensor_data_size;
-    dinject->total_line = dinject->file_size / (LINE_LENGTH(dinject->sensor_data_size)); /*52 is the size of each line
-                                                                                          * in the log file */
-
-    return BHY2_OK;
+    return rslt;
 }
 
 /**
-* @brief Function to get the Timestamp and read a data sample
+ * @brief Function to inject the data
 */
-int8_t dinject_log_init(struct data_inject *dinject, struct bhy2_dev *bhy2)
+int8_t dinject_inject_data(int event_id, struct data_inject *dinject, struct bhy2_dev *bhy2)
 {
-    uint8_t log[dinject->sensor_block_size];
-    uint8_t ts[TIMESTAMP_LENGTH];
     int8_t rslt;
 
-    /*! Read large Timestamp */
-    for (int i = 0; i < TIMESTAMP_LENGTH; i++)
+    if (feof(dinject->in_log_ptr) || (event_id == EOF))
     {
-        fscanf(dinject->in_log_ptr, "%x", &ts[i]);
-    }
-
-    /*! Read Delta timestamp, accelerometer and gyroscope data*/
-    for (int i = 0; i < dinject->sensor_data_size; i++)
-    {
-        fscanf(dinject->in_log_ptr, "%x", &log[i]);
-    }
-
-    /*! Decrement Line count */
-    dinject->total_line = dinject->total_line - 1;
-
-    /*! Inject the Large Timestamp*/
-    rslt = bhy2_inject_data(ts, TIMESTAMP_LENGTH, bhy2);
-    if (rslt != BHY2_OK)
-    {
-        ERROR("Timestamp Injection failed\r\n");
-
-        return DINJECT_FAILED;
-    }
-    else
-    {
-        PRINT("Timestamp Injection successful\r\n");
-    }
-
-    /*! Inject the Data Sample*/
-    rslt = bhy2_inject_data(log, dinject->sensor_data_size, bhy2);
-    if (rslt != BHY2_OK)
-    {
-        ERROR("Data Sample Injection failed\r\n");
-
-        return DINJECT_FAILED;
-    }
-    else
-    {
-        PRINT("Data Sample Injection successful\r\n");
-    }
-
-    return BHY2_OK;
-}
-
-/**
-* @brief Function to inject the data
-*/
-int8_t dinject_inject_data(uint32_t *actual_len, struct data_inject *dinject, struct bhy2_dev *bhy2)
-{
-    uint8_t log[dinject->sensor_block_size];
-    int8_t rslt;
-    uint32_t len = *actual_len;
-
-    /*! Read Bulk sensor data (7 packets max) */
-    for (int i = 0; i < len; i++)
-    {
-        fscanf(dinject->in_log_ptr, "%x", &log[i]);
-    }
-
-    /*! Inject the Data*/
-    rslt = bhy2_inject_data(log, len, bhy2);
-    if (rslt != BHY2_OK)
-    {
-        ERROR("Data Injection failed\r\n");
-
-        return DINJECT_FAILED;
-    }
-
-    /*! Update the Line count and check Data Injection progress*/
-    dinject->total_line = dinject->total_line - (dinject->sensor_block_size / dinject->sensor_data_size);
-
-    if (dinject->total_line <= 0)
-    {
-        PRINT("Data Injection completed successfully !!!!\r\n");
+        PRINT("Data Injection Completed\r\n");
 
         return DINJECT_SUCCESSFUL;
     }
-    else if (dinject->total_line < (dinject->sensor_block_size / dinject->sensor_data_size))
-    {
-        len = dinject->total_line * dinject->sensor_data_size;
-    }
     else
     {
-        len = dinject->sensor_block_size;
+        switch (event_id)
+        {
+            case ACCEL_INJECT_ID:
+                event_size = ACCEL_INJECT_EVENT_SIZE;
+                inject_log[len] = event_id;
+                rslt =
+                    dinject_parse_file(dinject->in_log_ptr, _8BIT_HEX_LEN, ACCEL_INJECT_EVENT_SIZE - 1,
+                                       &inject_log[len + 1]);
+                if (rslt != DI_PARSE_SUCCESS)
+                {
+                    ERROR("File Parsing failed \r\n");
+                }
+
+                len += event_size;
+                break;
+
+            case GYRO_INJECT_ID:
+                event_size = GYRO_INJECT_EVENT_SIZE;
+                inject_log[len] = event_id;
+                rslt =
+                    dinject_parse_file(dinject->in_log_ptr, _8BIT_HEX_LEN, GYRO_INJECT_EVENT_SIZE - 1,
+                                       &inject_log[len + 1]);
+                if (rslt != DI_PARSE_SUCCESS)
+                {
+                    ERROR("File Parsing failed \r\n");
+                }
+
+                len += event_size;
+                break;
+
+            case TIMESTAMP_LARGE_DELTA_WU_ID:
+            case TIMESTAMP_LARGE_DELTA_NWU_ID:
+                if (len != 0)
+                {
+
+                    rslt = bhy2_inject_data(inject_log, len, bhy2);
+                    if (rslt == 0)
+                    {
+                        memset(inject_log, 0, sizeof(inject_log));
+                    }
+
+                    len = 0;
+                }
+
+                event_size = TIMESTAMP_LARGE_DELTA_EVENT_SIZE;
+                inject_log[len] = event_id;
+                rslt = dinject_parse_file(dinject->in_log_ptr,
+                                          _8BIT_HEX_LEN,
+                                          TIMESTAMP_LARGE_DELTA_EVENT_SIZE - 1,
+                                          &inject_log[len + 1]);
+                if (rslt != DI_PARSE_SUCCESS)
+                {
+                    ERROR("File Parsing failed \r\n");
+                }
+
+                len += event_size;
+                break;
+
+            case TIMESTAMP_SMALL_DELTA_WU_ID:
+            case TIMESTAMP_SMALL_DELTA_NWU_ID:
+                if (len != 0)
+                {
+                    rslt = bhy2_inject_data(inject_log, len, bhy2);
+                    if (rslt == 0)
+                    {
+                        memset(inject_log, 0, sizeof(inject_log));
+                    }
+
+                    len = 0;
+                }
+
+                event_size = TIMESTAMP_SMALL_DELTA_EVENT_SIZE;
+                inject_log[len] = event_id;
+                rslt = dinject_parse_file(dinject->in_log_ptr,
+                                          _8BIT_HEX_LEN,
+                                          TIMESTAMP_SMALL_DELTA_EVENT_SIZE - 1,
+                                          &inject_log[len + 1]);
+                if (rslt != DI_PARSE_SUCCESS)
+                {
+                    ERROR("File Parsing failed \r\n");
+                }
+
+                len += event_size;
+                break;
+
+            case FULL_TIMESTAMP_WU_ID:
+            case FULL_TIMESTAMP_NWU_ID:
+                event_size = FULL_TIMESTAMP_EVENT_SIZE;
+                inject_log[len] = event_id;
+                rslt = dinject_parse_file(dinject->in_log_ptr,
+                                          _8BIT_HEX_LEN,
+                                          FULL_TIMESTAMP_EVENT_SIZE - 1,
+                                          &inject_log[len + 1]);
+                if (rslt != DI_PARSE_SUCCESS)
+                {
+                    ERROR("File Parsing failed \r\n");
+                }
+
+                rslt = bhy2_inject_data(inject_log, event_size, bhy2);
+                if (rslt == 0)
+                {
+                    memset(inject_log, 0, sizeof(inject_log));
+                }
+
+                len = 0;
+                break;
+
+            case META_EVENT_WU_ID:
+            case META_EVENT_NWU_ID:
+                event_size = META_EVENT_SIZE;
+                inject_log[len] = event_id;
+                rslt =
+                    dinject_parse_file(dinject->in_log_ptr, _8BIT_HEX_LEN, META_EVENT_SIZE - 1, &inject_log[len + 1]);
+                if (rslt != DI_PARSE_SUCCESS)
+                {
+                    ERROR("File Parsing failed \r\n");
+                }
+
+                rslt = bhy2_inject_data(inject_log, event_size, bhy2);
+                if (rslt == 0)
+                {
+                    memset(inject_log, 0, sizeof(inject_log));
+                }
+
+                len = 0;
+                break;
+
+            case DEBUT_EVENT_ID:
+                event_size = DEBUG_EVENT_SIZE;
+                inject_log[len] = event_id;
+                rslt =
+                    dinject_parse_file(dinject->in_log_ptr, _8BIT_HEX_LEN, DEBUG_EVENT_SIZE - 1, &inject_log[len + 1]);
+                if (rslt != DI_PARSE_SUCCESS)
+                {
+                    ERROR("File Parsing failed \r\n");
+                }
+
+                rslt = bhy2_inject_data(inject_log, event_size, bhy2);
+                if (rslt == 0)
+                {
+                    memset(inject_log, 0, sizeof(inject_log));
+                }
+
+                len = 0;
+                break;
+
+            default:
+                pos = ftell(dinject->in_log_ptr);
+                PRINT("\r\nError parsing 0x%X @ %u (0x%X)\r\n", event_id, pos, pos);
+
+                return DINJECT_FAILED;
+        }
     }
 
     return DINJECT_IN_PROGRESS;
@@ -191,6 +361,9 @@ int8_t dinject_inject_data(uint32_t *actual_len, struct data_inject *dinject, st
 */
 int8_t dinject_deinit(struct data_inject *dinject, struct bhy2_dev *bhy2)
 {
+    pos = 0;
+    memset(inject_log, 0, sizeof(inject_log));
+
     /*! Close the Field Log file, if open */
     PRINT("Closing the files\r\n");
 

@@ -1,8 +1,4 @@
-ifeq ($(OS),Windows_NT)
-HOME=C:
-endif
-
-COINES_INSTALL_PATH ?= ../../../submodules/coines
+COINES_INSTALL_PATH ?= ../../../../..
 
 EXAMPLE_FILE ?= decompressor.c
 

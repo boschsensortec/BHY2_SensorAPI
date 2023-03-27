@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -227,7 +227,7 @@ int main(void)
     {
         printf("Host interface not ready. Exiting\r\n");
 
-        close_interfaces(BHY2_SPI_INTERFACE);
+        close_interfaces(intf);
 
         return 0;
     }
@@ -321,7 +321,7 @@ int main(void)
     fclose(fp);
 
     /*! Close all the active communication */
-    close_interfaces(BHY2_SPI_INTERFACE);
+    close_interfaces(intf);
 
     return rslt;
 }

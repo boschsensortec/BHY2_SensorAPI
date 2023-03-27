@@ -1,5 +1,26 @@
 # Changelog
 
+# v0.4.8
+- Optimised the Data Injection feature for generic use by removing Sensor ID dependnecy
+- Integrated generic file parser for txt/bin files and resolved length dependency, for Data Injection
+- Resolved Data Injection Issue in PC Mode
+- Resolved EOF check failing for Data Injection in PC Mode
+- Changed the Pattern Size check condtion for Klio, to accomadate for loading Adaptive Patterns
+- Added notification for File Transfer status for 'wrfile' command
+- Added support for getting the list of active sensors along with their configurations and currently open log file
+- Added support for retrieving Post Mortem data (Currently supported only for MCU mode)
+- Added support for BHI3 Sensor API
+- Added support for new sensors -
+	- Multi-Tap Detector
+	- Activity recognition for wearables
+	- No Motion
+	- Wrist wear wake-up
+	- Wrist gesture detector
+- Added support for configuring the Physical Sensor Control Parameters
+- Added support for reading the Physical Sensor Information
+- Increase BLE Transmission Power to +8dBM
+- Updated the Wrist Gesture output as per new firmware.
+
 # v0.4.7
 - Added support for Head_Orientation virtual sensor
 - Added support for PDR_Log virtual sensor

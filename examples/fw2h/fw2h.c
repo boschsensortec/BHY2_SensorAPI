@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -31,7 +31,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * @file    fw2h.c
- * @brief   Quaternion data stream example for the BHI260/BHA260
+ * @brief   Firmware to Header example for the BHI260/BHA260
  *
  */
 #include <stdio.h>

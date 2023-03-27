@@ -31,8 +31,8 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *
 * @file       bhy2.c
-* @date       2022-10-17
-* @version    v1.4.1
+* @date       2023-02-10
+* @version    v1.5.0
 *
 */
 
@@ -1077,6 +1077,24 @@ int8_t bhy2_set_orientation_matrix(uint8_t phys_sensor_id, struct bhy2_orient_ma
     return rslt;
 }
 
+int8_t bhy2_get_phys_sensor_info(uint8_t phys_sensor_id,
+                                 struct bhy2_phys_sensor_info *phy_sen_info,
+                                 struct bhy2_dev *dev)
+{
+    int8_t rslt = BHY2_OK;
+
+    if ((dev == NULL) || (phy_sen_info == NULL))
+    {
+        rslt = BHY2_E_NULL_PTR;
+    }
+    else
+    {
+        rslt = bhy2_hif_get_phys_sensor_info(phys_sensor_id, phy_sen_info, &dev->hif);
+    }
+
+    return rslt;
+}
+
 int8_t bhy2_get_orientation_matrix(uint8_t phys_sensor_id,
                                    struct bhy2_orient_matrix *orient_matrix,
                                    struct bhy2_dev *dev)
@@ -1190,7 +1208,7 @@ int8_t bhy2_set_calibration_profile(uint8_t phy_sensor_id,
 int8_t bhy2_get_post_mortem_data(uint8_t *post_mortem, uint32_t buffer_len, uint32_t *actual_len, struct bhy2_dev *dev)
 {
     int8_t rslt = BHY2_OK;
-    uint16_t crash_dump_status_code;
+    uint16_t crash_dump_status_code = 0;
 
     if ((dev == NULL) || (post_mortem == NULL) || (actual_len == NULL))
     {

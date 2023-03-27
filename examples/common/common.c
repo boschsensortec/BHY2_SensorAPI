@@ -204,6 +204,10 @@ void setup_interfaces(bool reset_power, enum bhy2_intf intf)
     struct coines_board_info board_info;
 
 #ifndef PC
+    struct coines_ble_config ble_config;
+    ble_config.name = NULL;
+    ble_config.tx_power = COINES_TX_POWER_8_DBM;
+    coines_ble_config(&ble_config);
     coines_rslt = coines_open_comm_intf(COINES_COMM_INTF_BLE, NULL);
 #else
     coines_rslt = coines_open_comm_intf(COINES_COMM_INTF_USB, NULL);
@@ -679,48 +683,6 @@ char *get_sensor_name(uint8_t sensor_id)
         case BHY2_SENSOR_ID_ORI_WU:
             ret = "Orientation wake up";
             break;
-        case BHY2_SENSOR_ID_TILT_DETECTOR:
-            ret = "Tilt detector";
-            break;
-        case BHY2_SENSOR_ID_STD:
-            ret = "Step detector";
-            break;
-        case BHY2_SENSOR_ID_STC:
-            ret = "Step counter";
-            break;
-        case BHY2_SENSOR_ID_STC_WU:
-            ret = "Step counter wake up";
-            break;
-        case BHY2_SENSOR_ID_SIG:
-            ret = "Significant motion";
-            break;
-        case BHY2_SENSOR_ID_WAKE_GESTURE:
-            ret = "Wake gesture";
-            break;
-        case BHY2_SENSOR_ID_GLANCE_GESTURE:
-            ret = "Glance gesture";
-            break;
-        case BHY2_SENSOR_ID_PICKUP_GESTURE:
-            ret = "Pickup gesture";
-            break;
-        case BHY2_SENSOR_ID_AR:
-            ret = "Activity recognition";
-            break;
-        case BHY2_SENSOR_ID_WRIST_TILT_GESTURE:
-            ret = "Wrist tilt gesture";
-            break;
-        case BHY2_SENSOR_ID_DEVICE_ORI:
-            ret = "Device orientation";
-            break;
-        case BHY2_SENSOR_ID_DEVICE_ORI_WU:
-            ret = "Device orientation wake up";
-            break;
-        case BHY2_SENSOR_ID_STATIONARY_DET:
-            ret = "Stationary detect";
-            break;
-        case BHY2_SENSOR_ID_MOTION_DET:
-            ret = "Motion detect";
-            break;
         case BHY2_SENSOR_ID_ACC_BIAS_WU:
             ret = "Accelerometer offset wake up";
             break;
@@ -729,9 +691,6 @@ char *get_sensor_name(uint8_t sensor_id)
             break;
         case BHY2_SENSOR_ID_MAG_BIAS_WU:
             ret = "Magnetometer offset wake up";
-            break;
-        case BHY2_SENSOR_ID_STD_WU:
-            ret = "Step detector wake up";
             break;
         case BHY2_SENSOR_ID_TEMP:
             ret = "Temperature";
@@ -757,48 +716,6 @@ char *get_sensor_name(uint8_t sensor_id)
         case BHY2_SENSOR_ID_GAS_WU:
             ret = "Gas wake up";
             break;
-        case BHY2_SENSOR_ID_STC_HW:
-            ret = "Hardware Step counter";
-            break;
-        case BHY2_SENSOR_ID_STD_HW:
-            ret = "Hardware Step detector";
-            break;
-        case BHY2_SENSOR_ID_SIG_HW:
-            ret = "Hardware Significant motion";
-            break;
-        case BHY2_SENSOR_ID_STC_HW_WU:
-            ret = "Hardware Step counter wake up";
-            break;
-        case BHY2_SENSOR_ID_STD_HW_WU:
-            ret = "Hardware Step detector wake up";
-            break;
-        case BHY2_SENSOR_ID_SIG_HW_WU:
-            ret = "Hardware Significant motion wake up";
-            break;
-        case BHY2_SENSOR_ID_ANY_MOTION:
-            ret = "Any motion";
-            break;
-        case BHY2_SENSOR_ID_ANY_MOTION_WU:
-            ret = "Any motion wake up";
-            break;
-        case BHY2_SENSOR_ID_EXCAMERA:
-            ret = "External camera trigger";
-            break;
-        case BHY2_SENSOR_ID_GPS:
-            ret = "GPS";
-            break;
-        case BHY2_SENSOR_ID_LIGHT:
-            ret = "Light";
-            break;
-        case BHY2_SENSOR_ID_PROX:
-            ret = "Proximity";
-            break;
-        case BHY2_SENSOR_ID_LIGHT_WU:
-            ret = "Light wake up";
-            break;
-        case BHY2_SENSOR_ID_PROX_WU:
-            ret = "Proximity wake up";
-            break;
         case BHY2_SENSOR_ID_KLIO:
             ret = "Klio";
             break;
@@ -819,6 +736,108 @@ char *get_sensor_name(uint8_t sensor_id)
             break;
         case BHY2_SENSOR_ID_SI_GYROS:
             ret = "SI Gyro";
+            break;
+        case BHY2_SENSOR_ID_LIGHT:
+            ret = "Light";
+            break;
+        case BHY2_SENSOR_ID_LIGHT_WU:
+            ret = "Light wake up";
+            break;
+        case BHY2_SENSOR_ID_PROX:
+            ret = "Proximity";
+            break;
+        case BHY2_SENSOR_ID_PROX_WU:
+            ret = "Proximity wake up";
+            break;
+        case BHY2_SENSOR_ID_STC:
+            ret = "Step counter";
+            break;
+        case BHY2_SENSOR_ID_STC_WU:
+            ret = "Step counter wake up";
+            break;
+        case BHY2_SENSOR_ID_STC_LP:
+            ret = "Low Power Step counter";
+            break;
+        case BHY2_SENSOR_ID_STC_LP_WU:
+            ret = "Low Power Step counter wake up";
+            break;
+        case BHY2_SENSOR_ID_SIG:
+            ret = "Significant motion";
+            break;
+        case BHY2_SENSOR_ID_STD:
+            ret = "Step detector";
+            break;
+        case BHY2_SENSOR_ID_STD_WU:
+            ret = "Step detector wake up";
+            break;
+        case BHY2_SENSOR_ID_TILT_DETECTOR:
+            ret = "Tilt detector";
+            break;
+        case BHY2_SENSOR_ID_WAKE_GESTURE:
+            ret = "Wake gesture";
+            break;
+        case BHY2_SENSOR_ID_GLANCE_GESTURE:
+            ret = "Glance gesture";
+            break;
+        case BHY2_SENSOR_ID_PICKUP_GESTURE:
+            ret = "Pickup gesture";
+            break;
+        case BHY2_SENSOR_ID_SIG_LP:
+            ret = "Low Power Significant motion";
+            break;
+        case BHY2_SENSOR_ID_SIG_LP_WU:
+            ret = "Low Power Significant motion wake up";
+            break;
+        case BHY2_SENSOR_ID_STD_LP:
+            ret = "Low Power Step detector";
+            break;
+        case BHY2_SENSOR_ID_STD_LP_WU:
+            ret = "Low Power Step detector wake up";
+            break;
+        case BHY2_SENSOR_ID_AR:
+            ret = "Activity recognition";
+            break;
+        case BHY2_SENSOR_ID_EXCAMERA:
+            ret = "External camera trigger";
+            break;
+        case BHY2_SENSOR_ID_GPS:
+            ret = "GPS";
+            break;
+        case BHY2_SENSOR_ID_WRIST_TILT_GESTURE:
+            ret = "Wrist tilt gesture";
+            break;
+        case BHY2_SENSOR_ID_DEVICE_ORI:
+            ret = "Device orientation";
+            break;
+        case BHY2_SENSOR_ID_DEVICE_ORI_WU:
+            ret = "Device orientation wake up";
+            break;
+        case BHY2_SENSOR_ID_STATIONARY_DET:
+            ret = "Stationary detect";
+            break;
+        case BHY2_SENSOR_ID_ANY_MOTION_LP:
+            ret = "Low Power Any motion";
+            break;
+        case BHY2_SENSOR_ID_ANY_MOTION_LP_WU:
+            ret = "Low Power Any motion wake up";
+            break;
+        case BHI3_SENSOR_ID_NO_MOTION_LP_WU:
+            ret = "Low Power No Motion wake up";
+            break;
+        case BHY2_SENSOR_ID_MOTION_DET:
+            ret = "Motion detect";
+            break;
+        case BHI3_SENSOR_ID_AR_WEAR_WU:
+            ret = "Activity recognition for Wearables";
+            break;
+        case BHI3_SENSOR_ID_WRIST_WEAR_LP_WU:
+            ret = "Low Power Wrist Wear wake up";
+            break;
+        case BHI3_SENSOR_ID_WRIST_GEST_DETECT_LP_WU:
+            ret = "Low Power Wrist Gesture wake up";
+            break;
+        case BHI3_SENSOR_ID_MULTI_TAP:
+            ret = "Multi Tap Detector";
             break;
         case BHY2_SENSOR_ID_AIR_QUALITY:
             ret = "Air Quality";
@@ -886,7 +905,6 @@ float get_sensor_default_scaling(uint8_t sensor_id)
         case BHY2_SENSOR_ID_ORI_WU:
             scaling = 360.0f / 32768.0f;
             break;
-
         case BHY2_SENSOR_ID_TEMP:
         case BHY2_SENSOR_ID_TEMP_WU:
             scaling = 1.0f / 100.0f;
@@ -968,35 +986,14 @@ char *get_sensor_parse_format(uint8_t sensor_id)
         case BHY2_SENSOR_ID_ORI_WU:
             ret = "s16,s16,s16";
             break;
-        case BHY2_SENSOR_ID_TILT_DETECTOR:
-        case BHY2_SENSOR_ID_STD:
-        case BHY2_SENSOR_ID_SIG:
-        case BHY2_SENSOR_ID_WAKE_GESTURE:
-        case BHY2_SENSOR_ID_GLANCE_GESTURE:
-        case BHY2_SENSOR_ID_PICKUP_GESTURE:
-        case BHY2_SENSOR_ID_WRIST_TILT_GESTURE:
-        case BHY2_SENSOR_ID_STATIONARY_DET:
-        case BHY2_SENSOR_ID_MOTION_DET:
-        case BHY2_SENSOR_ID_STD_WU:
-        case BHY2_SENSOR_ID_STD_HW:
-        case BHY2_SENSOR_ID_SIG_HW:
-        case BHY2_SENSOR_ID_STD_HW_WU:
-        case BHY2_SENSOR_ID_SIG_HW_WU:
-        case BHY2_SENSOR_ID_ANY_MOTION:
-        case BHY2_SENSOR_ID_ANY_MOTION_WU:
-            ret = "";
-            break;
-        case BHY2_SENSOR_ID_STC:
-        case BHY2_SENSOR_ID_STC_WU:
-        case BHY2_SENSOR_ID_STC_HW:
-        case BHY2_SENSOR_ID_STC_HW_WU:
-            ret = "u32";
-            break;
-        case BHY2_SENSOR_ID_AR:
-            ret = "u16";
-            break;
         case BHY2_SENSOR_ID_DEVICE_ORI:
         case BHY2_SENSOR_ID_DEVICE_ORI_WU:
+        case BHY2_SENSOR_ID_HUM:
+        case BHY2_SENSOR_ID_HUM_WU:
+        case BHY2_SENSOR_ID_PROX:
+        case BHY2_SENSOR_ID_PROX_WU:
+        case BHY2_SENSOR_ID_EXCAMERA:
+        case BHI3_SENSOR_ID_MULTI_TAP:
             ret = "u8";
             break;
         case BHY2_SENSOR_ID_TEMP:
@@ -1007,27 +1004,13 @@ char *get_sensor_parse_format(uint8_t sensor_id)
         case BHY2_SENSOR_ID_BARO_WU:
             ret = "u24";
             break;
-        case BHY2_SENSOR_ID_HUM:
-        case BHY2_SENSOR_ID_HUM_WU:
-            ret = "u8";
-            break;
         case BHY2_SENSOR_ID_GAS:
         case BHY2_SENSOR_ID_GAS_WU:
+        case BHY2_SENSOR_ID_STC:
+        case BHY2_SENSOR_ID_STC_WU:
+        case BHY2_SENSOR_ID_STC_LP:
+        case BHY2_SENSOR_ID_STC_LP_WU:
             ret = "u32";
-            break;
-        case BHY2_SENSOR_ID_EXCAMERA:
-            ret = "u8";
-            break;
-        case BHY2_SENSOR_ID_GPS:
-            ret = "st";
-            break;
-        case BHY2_SENSOR_ID_LIGHT:
-        case BHY2_SENSOR_ID_LIGHT_WU:
-            ret = "s16";
-            break;
-        case BHY2_SENSOR_ID_PROX:
-        case BHY2_SENSOR_ID_PROX_WU:
-            ret = "u8";
             break;
         case BHY2_SENSOR_ID_KLIO:
             ret = "u8,u8,u8,u8,u8,u8,f";
@@ -1041,6 +1024,40 @@ char *get_sensor_parse_format(uint8_t sensor_id)
         case BHY2_SENSOR_ID_SI_ACCEL:
         case BHY2_SENSOR_ID_SI_GYROS:
             ret = "f,f,f";
+            break;
+        case BHY2_SENSOR_ID_LIGHT:
+        case BHY2_SENSOR_ID_LIGHT_WU:
+            ret = "s16";
+            break;
+        case BHY2_SENSOR_ID_SIG:
+        case BHY2_SENSOR_ID_STD:
+        case BHY2_SENSOR_ID_STD_WU:
+        case BHY2_SENSOR_ID_TILT_DETECTOR:
+        case BHY2_SENSOR_ID_WAKE_GESTURE:
+        case BHY2_SENSOR_ID_GLANCE_GESTURE:
+        case BHY2_SENSOR_ID_PICKUP_GESTURE:
+        case BHY2_SENSOR_ID_SIG_LP:
+        case BHY2_SENSOR_ID_SIG_LP_WU:
+        case BHY2_SENSOR_ID_STD_LP:
+        case BHY2_SENSOR_ID_STD_LP_WU:
+        case BHY2_SENSOR_ID_WRIST_TILT_GESTURE:
+        case BHY2_SENSOR_ID_STATIONARY_DET:
+        case BHY2_SENSOR_ID_ANY_MOTION_LP:
+        case BHY2_SENSOR_ID_ANY_MOTION_LP_WU:
+        case BHI3_SENSOR_ID_NO_MOTION_LP_WU:
+        case BHY2_SENSOR_ID_MOTION_DET:
+        case BHI3_SENSOR_ID_WRIST_WEAR_LP_WU:
+            ret = "";
+            break;
+        case BHY2_SENSOR_ID_AR:
+        case BHI3_SENSOR_ID_AR_WEAR_WU:
+            ret = "u16";
+            break;
+        case BHY2_SENSOR_ID_GPS:
+            ret = "st";
+            break;
+        case BHI3_SENSOR_ID_WRIST_GEST_DETECT_LP_WU:
+            ret = "u8";
             break;
         case BHY2_SENSOR_ID_AIR_QUALITY:
             ret = "f32,f32,f32,f32,f32,f32,f32,u8";
@@ -1099,33 +1116,6 @@ char *get_sensor_axis_names(uint8_t sensor_id)
         case BHY2_SENSOR_ID_ORI_WU:
             ret = "h,p,r";
             break;
-        case BHY2_SENSOR_ID_TILT_DETECTOR:
-        case BHY2_SENSOR_ID_STD:
-        case BHY2_SENSOR_ID_SIG:
-        case BHY2_SENSOR_ID_WAKE_GESTURE:
-        case BHY2_SENSOR_ID_GLANCE_GESTURE:
-        case BHY2_SENSOR_ID_PICKUP_GESTURE:
-        case BHY2_SENSOR_ID_WRIST_TILT_GESTURE:
-        case BHY2_SENSOR_ID_STATIONARY_DET:
-        case BHY2_SENSOR_ID_MOTION_DET:
-        case BHY2_SENSOR_ID_STD_WU:
-        case BHY2_SENSOR_ID_STD_HW:
-        case BHY2_SENSOR_ID_SIG_HW:
-        case BHY2_SENSOR_ID_STD_HW_WU:
-        case BHY2_SENSOR_ID_SIG_HW_WU:
-        case BHY2_SENSOR_ID_ANY_MOTION:
-        case BHY2_SENSOR_ID_ANY_MOTION_WU:
-            ret = "e";
-            break;
-        case BHY2_SENSOR_ID_STC:
-        case BHY2_SENSOR_ID_STC_WU:
-        case BHY2_SENSOR_ID_STC_HW:
-        case BHY2_SENSOR_ID_STC_HW_WU:
-            ret = "c";
-            break;
-        case BHY2_SENSOR_ID_AR:
-            ret = "a";
-            break;
         case BHY2_SENSOR_ID_DEVICE_ORI:
         case BHY2_SENSOR_ID_DEVICE_ORI_WU:
             ret = "o";
@@ -1146,11 +1136,14 @@ char *get_sensor_axis_names(uint8_t sensor_id)
         case BHY2_SENSOR_ID_GAS_WU:
             ret = "g";
             break;
-        case BHY2_SENSOR_ID_EXCAMERA:
-            ret = "c";
+        case BHY2_SENSOR_ID_KLIO:
+            ret = "lin,lid,lpr,lcr,rin,rid,rc";
             break;
-        case BHY2_SENSOR_ID_GPS:
-            ret = "g";
+        case BHY2_SENSOR_ID_PDR:
+            ret = "x,y,hoa,h,ha,sc,s";
+            break;
+        case BHY2_SENSOR_ID_SWIM:
+            ret = "d,lc,f,br,bu,ba,sc";
             break;
         case BHY2_SENSOR_ID_LIGHT:
         case BHY2_SENSOR_ID_LIGHT_WU:
@@ -1160,14 +1153,45 @@ char *get_sensor_axis_names(uint8_t sensor_id)
         case BHY2_SENSOR_ID_PROX_WU:
             ret = "p";
             break;
-        case BHY2_SENSOR_ID_KLIO:
-            ret = "lin,lid,lpr,lcr,rin,rid,rc";
+        case BHY2_SENSOR_ID_STC:
+        case BHY2_SENSOR_ID_STC_WU:
+        case BHY2_SENSOR_ID_STC_LP:
+        case BHY2_SENSOR_ID_STC_LP_WU:
+        case BHY2_SENSOR_ID_EXCAMERA:
+            ret = "c";
             break;
-        case BHY2_SENSOR_ID_PDR:
-            ret = "x,y,hoa,h,ha,sc,s";
+        case BHY2_SENSOR_ID_SIG:
+        case BHY2_SENSOR_ID_STD:
+        case BHY2_SENSOR_ID_STD_WU:
+        case BHY2_SENSOR_ID_TILT_DETECTOR:
+        case BHY2_SENSOR_ID_WAKE_GESTURE:
+        case BHY2_SENSOR_ID_GLANCE_GESTURE:
+        case BHY2_SENSOR_ID_PICKUP_GESTURE:
+        case BHY2_SENSOR_ID_SIG_LP:
+        case BHY2_SENSOR_ID_SIG_LP_WU:
+        case BHY2_SENSOR_ID_STD_LP:
+        case BHY2_SENSOR_ID_STD_LP_WU:
+        case BHY2_SENSOR_ID_WRIST_TILT_GESTURE:
+        case BHY2_SENSOR_ID_STATIONARY_DET:
+        case BHY2_SENSOR_ID_ANY_MOTION_LP:
+        case BHY2_SENSOR_ID_ANY_MOTION_LP_WU:
+        case BHI3_SENSOR_ID_NO_MOTION_LP_WU:
+        case BHY2_SENSOR_ID_MOTION_DET:
+        case BHI3_SENSOR_ID_WRIST_WEAR_LP_WU:
+            ret = "e";
             break;
-        case BHY2_SENSOR_ID_SWIM:
-            ret = "d,lc,f,br,bu,ba,sc";
+        case BHY2_SENSOR_ID_AR:
+        case BHI3_SENSOR_ID_AR_WEAR_WU:
+            ret = "a";
+            break;
+        case BHY2_SENSOR_ID_GPS:
+            ret = "g";
+            break;
+        case BHI3_SENSOR_ID_WRIST_GEST_DETECT_LP_WU:
+            ret = "wrist_gesture";
+            break;
+        case BHI3_SENSOR_ID_MULTI_TAP:
+            ret = "taps";
             break;
         case BHY2_SENSOR_ID_AIR_QUALITY:
             ret = "t,h,g,i,si,c,v,a";

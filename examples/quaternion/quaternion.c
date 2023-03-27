@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -46,9 +46,9 @@
 /*#define UPLOAD_FIRMWARE_TO_FLASH */
 
 #ifdef UPLOAD_FIRMWARE_TO_FLASH
-#include "bhi260ap/BHI260AP_BMM150-flash.fw.h"
+#include "bhi260ap/BHI260AP_aux_BMM150-flash.fw.h"
 #else
-#include "bhi260ap/BHI260AP_BMM150.fw.h"
+#include "bhi260ap/BHI260AP_aux_BMM150.fw.h"
 #endif
 
 #define WORK_BUFFER_SIZE  2048
@@ -154,7 +154,7 @@ int main(void)
     {
         printf("Host interface not ready. Exiting\r\n");
 
-        close_interfaces(BHY2_SPI_INTERFACE);
+        close_interfaces(intf);
 
         return 0;
     }
@@ -179,7 +179,7 @@ int main(void)
         }
     }
 
-    close_interfaces(BHY2_SPI_INTERFACE);
+    close_interfaces(intf);
 
     return rslt;
 }

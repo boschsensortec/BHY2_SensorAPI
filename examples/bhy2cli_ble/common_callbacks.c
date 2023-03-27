@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -362,6 +362,8 @@ void wrfile_loop_callabck(bool echo_data)
 {
     uint32_t curr_ts, ts;
     uint16_t bytes_read_now = 0, len_check = 0;
+    float progress = 0, new_progress = 0;
+    int32_t file_size = wfile.data_len;
 
     /*! Indicate Command operation is Active */
     cmd_in_process = true;
@@ -395,22 +397,29 @@ void wrfile_loop_callabck(bool echo_data)
                 /*! If data in buffer greater than limit, parse the data upto limit length */
                 len_check = (wfile.data_len > bytes_read_now) ? bytes_read_now : wfile.data_len;
 
+                /*! Decrement the Write limit*/
+                wfile.data_len -= bytes_read_now;
+
                 /* Only for use with the terminal. Comment the following code snippet otherwise */
                 if (echo_data)
                 {
                     coines_write_intf(bhy2cli_intf, inp, len_check); /* Echo back the input */
                 }
 
+                progress = (float)((file_size - wfile.data_len) * 100.0f) / file_size;
+                if (progress != new_progress)
+                {
+                    PRINT("File Transferred : %0.2f%%\r", progress);
+                    new_progress = progress;
+                }
+
                 /*! Write the data to the File*/
                 fwrite(inp, len_check, 1, wfile.wfp);
-
-                /*! Decrement the Write limit*/
-                wfile.data_len -= bytes_read_now;
 
                 /*! Update the last Write timestamp */
                 wfile.last_write_ts = coines_get_millis();
 
-                /*! If Write Limit crossed, give Write Length Exceede status */
+                /*! If Write Limit crossed, give Write Length Exceeds status */
                 if (wfile.data_len < 0)
                 {
                     PRINT("\r\nWrite Length Exceeded \r\n");
@@ -441,7 +450,6 @@ void wrfile_loop_callabck(bool echo_data)
 
         /* Clear the buffer */
         memset(inp, 0, sizeof(inp));
-
     }
 
     /*! Close the File*/

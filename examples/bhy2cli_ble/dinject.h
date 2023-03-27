@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -44,50 +44,39 @@
 #include "bhy2_klio.h"
 #include "logbin.h"
 
-#define DINJECT_FAILED         INT8_C(-1)
-#define DINJECT_SUCCESSFUL     INT8_C(1)
-#define DINJECT_IN_PROGRESS    INT8_C(0)
+#include "dinject_defs.h"
 
-#define MAX_SAMPLES_PER_BLOCK  5
-#define TIMESTAMP_LENGTH       6
-#define LINE_LENGTH(x)         ((x * 2) + (x - 1) + 2)
+#define DINJECT_FAILED       INT8_C(-1)
+#define DINJECT_SUCCESSFUL   INT8_C(1)
+#define DINJECT_IN_PROGRESS  INT8_C(0)
+
+#define MAX_SAMPLE_LENGTH    256
 
 /*! Data Injection Structure */
 struct data_inject
 {
     FILE *in_log_ptr;
     uint32_t file_size;
-    int32_t total_line;
-    uint8_t sensor_data_size;
-    uint32_t sensor_block_size;
+    uint16_t event_size;
 };
 
 /**
 * @brief Function to initialize Data Injection structure
-* @param[in] id         : Sensor
 * @param[in] input      : Input Field Log
 * @param[in] dinject    : Data Injection structure
 * @param[in] bhy2       : Device reference
 * @return API error codes
 */
-int8_t dinject_init(uint8_t id, char *input, struct data_inject *dinject, struct bhy2_dev *bhy2);
-
-/**
-* @brief Function to get the Timestamp and read a data sample
-* @param[in] dinject     : Data Injection structure
-* @param[in] bhy2        : Device reference
-* @return API error codes
-*/
-int8_t dinject_log_init(struct data_inject *dinject, struct bhy2_dev *bhy2);
+int8_t dinject_init(char *input, struct data_inject *dinject, struct bhy2_dev *bhy2);
 
 /**
 * @brief Function to inject the data
-* @param[in] actual_len  : Size of the data to be injected
+* @param[in] event_id    : Event ID
 * @param[in] dinject     : Data Injection structure
 * @param[in] bhy2        : Device reference
 * @return API error codes
 */
-int8_t dinject_inject_data(uint32_t *actual_len, struct data_inject *dinject, struct bhy2_dev *bhy2);
+int8_t dinject_inject_data(int event_id, struct data_inject *dinject, struct bhy2_dev *bhy2);
 
 /**
 * @brief Function to uninitialize the Data Injection structure
@@ -96,5 +85,15 @@ int8_t dinject_inject_data(uint32_t *actual_len, struct data_inject *dinject, st
 * @return API error codes
 */
 int8_t dinject_deinit(struct data_inject *dinject, struct bhy2_dev *bhy2);
+
+/**
+* @brief Function to parse the Input File
+* @param[in] fp      : Input Field Log Pointer
+* @param[in] hex_len      : Hex String Length
+* @param[in] event_size      : Event Size
+* @param[in] int_stream        : Input Stream
+* @return API error codes
+*/
+int8_t dinject_parse_file(FILE *fp, size_t hex_len, size_t event_size, uint8_t int_stream[]);
 
 #endif /* BHY2CLI_DINJECT_H_ */

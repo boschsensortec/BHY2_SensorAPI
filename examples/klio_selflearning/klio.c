@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -202,7 +202,7 @@ int main(void)
     {
         printf("Host interface not ready. Exiting\r\n");
 
-        close_interfaces(BHY2_SPI_INTERFACE);
+        close_interfaces(intf);
 
         return 0;
     }
@@ -226,7 +226,7 @@ int main(void)
     {
         printf("Unable to allocate Klio buffers. Exiting\r\n");
 
-        close_interfaces(BHY2_SPI_INTERFACE);
+        close_interfaces(intf);
 
         return 0;
     }
@@ -280,7 +280,7 @@ int main(void)
     free(klio_rt.similarity_result_buf);
     free(klio_rt.similarity_idx_buf);
 
-    close_interfaces(BHY2_SPI_INTERFACE);
+    close_interfaces(intf);
 
     return rslt;
 }

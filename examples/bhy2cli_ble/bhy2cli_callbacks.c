@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -37,8 +37,7 @@
 
 #define BHY2CLI_VER_MAJOR       "0"
 #define BHY2CLI_VER_MINOR       "4"
-
-#define BHY2CLI_VER_BUGFIX      "7"
+#define BHY2CLI_VER_BUGFIX      "8"
 
 #ifdef __STDC_ALLOC_LIB__
 #define __STDC_WANT_LIB_EXT2__  1
@@ -64,8 +63,8 @@
 #include "common.h"
 #include "parse.h"
 #include "verbose.h"
-
 #include "dinject.h"
+#include "post_mortem.h"
 
 #define BHY2_ASSERT(x)             assert_rslt = x; if (assert_rslt) check_bhy2_api(__LINE__, __FUNCTION__, assert_rslt)
 
@@ -109,6 +108,19 @@ static bool klio_enabled = false;
 
 struct data_inject dinject;
 
+/*!
+ * @brief To convert string input to int
+ */
+uint16_t string_to_int(const char *str)
+{
+    char int_str[16] = { 0 };
+
+    strncpy(int_str, str, strlen(str));
+    int_str[strlen(str)] = '\0';
+
+    return (uint16_t)strtol(int_str, NULL, 0);
+}
+
 static cli_callback_table_t bhy2_cli_callbacks[] = {
     { 0, "", 0, NULL, NULL }, /* Empty characters creates a new line */
     { 'h', "help", 0, help_callback, help_help }, /* Print all available commands */
@@ -133,6 +145,8 @@ static cli_callback_table_t bhy2_cli_callbacks[] = {
     { 'i', "info", 0, info_callback, info_help }, /* Get information of the state of the device and loaded sensors */
     { 's', "rdp", 1, rdp_callback, rdp_help }, /* Read a parameter */
     { 't', "wrp", 1, wrp_callback, wrp_help }, /* Write a parameter */
+    { 'p', "physeninfo", 1, physeninfo_callback, physeninfo_help }, /* Read Physical Sensor Information */
+    { 'm', "postm", 1, pm_callback, pm_help }, /* Get Post Mortem Data */
     { 0, "logse", 1, logse_callback, logse_help }, /* Log sensor data in binary */
     { 0, "attlog", 1, attlog_callback, attlog_help }, /* Attach a log file for logging */
     { 0, "detlog", 1, detlog_callback, detlog_help }, /* Detach a log file for logging */
@@ -164,6 +178,34 @@ static cli_callback_table_t bhy2_cli_callbacks[] = {
     { 0, "swimsetfreq", 2, swimsetfreq_callback, swimsetfreq_help }, /* Set the Swim frequency */
     { 0, "swimgetaxes", 0, swimgetaxes_callback, swimgetaxes_help }, /* Get the Swim orientation sensor */
     { 0, "swimsetaxes", 1, swimsetaxes_callback, swimsetaxes_help }, /* Set the Swim orientation sensor */
+    { 0, "mtapen", 1, mtapen_callback, mtapen_help }, /* Enable/Disable Multi Tap Sensor */
+    { 0, "mtapinfo", 0, mtapinfo_callback, mtapinfo_help }, /* Get Multi Tap Sensor Info */
+    { 0, "mtapsetcnfg", 3, mtapsetcnfg_callback, mtapsetcnfg_help }, /* Set the Multi Tap Configuration */
+    { 0, "mtapgetcnfg", 0, mtapgetcnfg_callback, mtapgetcnfg_help }, /* Get the Multi Tap Configuration */
+    { 0, "accsetfoc", 3, accsetfoc_callback, accsetfoc_help }, /* Set the Accelerometer Fast Offset Calibration */
+    { 0, "accgetfoc", 0, accgetfoc_callback, accgetfoc_help }, /* Get the Accelerometer Fast Offset Calibration */
+    { 0, "accsetpwm", 1, accsetpwm_callback, accsetpwm_help }, /* Set the Accelerometer Power Mode */
+    { 0, "accgetpwm", 0, accgetpwm_callback, accgetpwm_help }, /* Get the Accelerometer Power Mode */
+    { 0, "gyrosetfoc", 3, gyrosetfoc_callback, gyrosetfoc_help }, /* Set the Gyroscope Fast Offset Calibration */
+    { 0, "gyrogetfoc", 0, gyrogetfoc_callback, gyrogetfoc_help }, /* Get the Gyroscope Fast Offset Calibration */
+    { 0, "gyrosetois", 1, gyrosetois_callback, gyrosetois_help }, /* Set the Gyroscope OIS Mode*/
+    { 0, "gyrogetois", 0, gyrogetois_callback, gyrogetois_help }, /* Get the Gyroscope OIS Mode*/
+    { 0, "gyrosetfs", 1, gyrosetfs_callback, gyrosetfs_help }, /* Set the Gyroscope Fast Startup Mode */
+    { 0, "gyrogetfs", 0, gyrogetfs_callback, gyrogetfs_help }, /* Get the Gyroscope Fast Startup Mode*/
+    { 0, "gyrosetcrt", 0, gyrosetcrt_callback, gyrosetcrt_help }, /* Set the Gyroscope CRT state*/
+    { 0, "gyrogetcrt", 0, gyrogetcrt_callback, gyrogetcrt_help }, /* Get the Gyroscope CRT status*/
+    { 0, "gyrosetpwm", 1, gyrosetpwm_callback, gyrosetpwm_help }, /* Set the Gyroscope Power Mode */
+    { 0, "gyrogetpwm", 0, gyrogetpwm_callback, gyrogetpwm_help }, /* Get the Gyroscope Power Mode */
+    { 0, "gyrosettat", 1, gyrosettat_callback, gyrosettat_help }, /* Set the Gyroscope Timer Auto Trim state*/
+    { 0, "gyrogettat", 0, gyrogettat_callback, gyrogettat_help }, /* Get the Gyroscope Timer Auto Trim status*/
+    { 0, "wwwsetcnfg", 8, wwwsetcnfg_callback, wwwsetcnfg_help }, /* Set the Wrist Wear Wakeup Configuration */
+    { 0, "wwwgetcnfg", 0, wwwgetcnfg_callback, wwwgetcnfg_help }, /* Get the Wrist Wear Wakeup Configuration */
+    { 0, "amsetcnfg", 1, amsetcnfg_callback, amsetcnfg_help }, /* Set the Any Motion Configuration */
+    { 0, "amgetcnfg", 0, amgetcnfg_callback, amgetcnfg_help }, /* Get the Any Motion Configuration */
+    { 0, "nmsetcnfg", 1, nmsetcnfg_callback, nmsetcnfg_help }, /* Set the No Motion Configuration */
+    { 0, "nmgetcnfg", 0, nmgetcnfg_callback, nmgetcnfg_help }, /* Get the No Motion Configuration */
+    { 0, "wgdsetcnfg", 10, wgdsetcnfg_callback, wgdsetcnfg_help }, /* Set the Wrist Gesture Detection Configuration */
+    { 0, "wgdgetcnfg", 0, wgdgetcnfg_callback, wgdgetcnfg_help }, /* Get the Wrist Gesture Detection Configuration */
 #ifndef PC
     { 0, "echo", 1, echo_callback, echo_help }, /* Toggle the echo setting */
     { 0, "heart", 1, heartbeat_callback, heartbeat_help }, /* Toggle the heartbeat message setting */
@@ -190,6 +232,7 @@ static void wr_regs(const char *payload, struct bhy2_dev *bhy2);
 static void rd_regs(const char *payload, struct bhy2_dev *bhy2);
 static void rd_param(const char *payload, struct bhy2_dev *bhy2);
 static void wr_param(const char *payload, struct bhy2_dev *bhy2);
+static void rd_phy_sensor_info(const char *payload, struct bhy2_dev *bhy2);
 static void erase_flash(uint32_t end_addr, struct bhy2_dev *bhy2);
 static void activate_sensor(const char *sensor_parameters, uint8_t parse_flag, struct bhy2_cli_ref *ref);
 static void parse_custom_sensor_default(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
@@ -212,6 +255,8 @@ void parse_pdr(const struct bhy2_fifo_parse_data_info *callback_info, void *call
 void parse_pdr_log(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
 void parse_swim(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
 void parse_acc_gyro(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
+void parse_multitap(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
+void parse_wrist_gesture_detect(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
 void parse_air_quality(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
 static void log_data(uint8_t sid, uint64_t tns, uint8_t event_size, uint8_t *event_payload, struct logbin_dev *logdev);
 static void write_meta_info(struct logbin_dev *log, struct bhy2_dev *bhy2);
@@ -239,7 +284,7 @@ void bhy2_callbacks_init(struct bhy2_cli_ref *cli_ref)
     }
 
     /* Print Copyright build date */
-    PRINT("Copyright (c) 2022 Bosch Sensortec GmbH\r\n");
+    PRINT("Copyright (c) 2023 Bosch Sensortec GmbH\r\n");
     PRINT("Version %s.%s.%s Build date: " __DATE__ "\r\n", BHY2CLI_VER_MAJOR, BHY2CLI_VER_MINOR, BHY2CLI_VER_BUGFIX);
 #ifdef BHY2_USE_I2C
     BHY2_ASSERT(bhy2_init(BHY2_I2C_INTERFACE, bhy2_i2c_read, bhy2_i2c_write, bhy2_delay_us, BHY2_RD_WR_LEN, NULL,
@@ -372,44 +417,13 @@ bhy2_fifo_parse_callback_t bhy2_get_callback(uint8_t sensor_id)
         case BHY2_SENSOR_ID_GEORV_WU:
             callback = parse_quaternion;
             break;
-        case BHY2_SENSOR_ID_SIG:
-        case BHY2_SENSOR_ID_SIG_HW:
-        case BHY2_SENSOR_ID_SIG_HW_WU:
-        case BHY2_SENSOR_ID_STD:
-        case BHY2_SENSOR_ID_STD_WU:
-        case BHY2_SENSOR_ID_STD_HW:
-        case BHY2_SENSOR_ID_STD_HW_WU:
-        case BHY2_SENSOR_ID_TILT_DETECTOR:
-        case BHY2_SENSOR_ID_WAKE_GESTURE:
-        case BHY2_SENSOR_ID_GLANCE_GESTURE:
-        case BHY2_SENSOR_ID_PICKUP_GESTURE:
-        case BHY2_SENSOR_ID_WRIST_TILT_GESTURE:
-        case BHY2_SENSOR_ID_STATIONARY_DET:
-        case BHY2_SENSOR_ID_MOTION_DET:
-        case BHY2_SENSOR_ID_ANY_MOTION:
-        case BHY2_SENSOR_ID_ANY_MOTION_WU:
-            callback = parse_scalar_event;
-            break;
-        case BHY2_SENSOR_ID_EXCAMERA:
-        case BHY2_SENSOR_ID_PROX:
-        case BHY2_SENSOR_ID_PROX_WU:
         case BHY2_SENSOR_ID_HUM:
         case BHY2_SENSOR_ID_HUM_WU:
             callback = parse_scalar_u8;
             break;
-        case BHY2_SENSOR_ID_STC:
-        case BHY2_SENSOR_ID_STC_WU:
-        case BHY2_SENSOR_ID_STC_HW:
-        case BHY2_SENSOR_ID_STC_HW_WU:
         case BHY2_SENSOR_ID_GAS:
         case BHY2_SENSOR_ID_GAS_WU:
             callback = parse_scalar_u32;
-            break;
-        case BHY2_SENSOR_ID_AR:
-            callback = parse_activity;
-            break;
-        case BHY2_SENSOR_ID_GPS:
-            callback = parse_gps;
             break;
         case BHY2_SENSOR_ID_DEVICE_ORI:
         case BHY2_SENSOR_ID_DEVICE_ORI_WU:
@@ -417,10 +431,6 @@ bhy2_fifo_parse_callback_t bhy2_get_callback(uint8_t sensor_id)
             break;
         case BHY2_SENSOR_ID_TEMP:
         case BHY2_SENSOR_ID_TEMP_WU:
-        case BHY2_SENSOR_ID_LIGHT:
-        case BHY2_SENSOR_ID_LIGHT_WU:
-            callback = parse_s16_as_float;
-            break;
         case BHY2_SENSOR_ID_BARO:
         case BHY2_SENSOR_ID_BARO_WU:
             callback = parse_u24_as_float;
@@ -443,6 +453,54 @@ bhy2_fifo_parse_callback_t bhy2_get_callback(uint8_t sensor_id)
         case BHY2_SENSOR_ID_SI_ACCEL:
         case BHY2_SENSOR_ID_SI_GYROS:
             callback = parse_acc_gyro;
+            break;
+        case BHY2_SENSOR_ID_LIGHT:
+        case BHY2_SENSOR_ID_LIGHT_WU:
+            callback = parse_s16_as_float;
+            break;
+        case BHY2_SENSOR_ID_PROX:
+        case BHY2_SENSOR_ID_PROX_WU:
+        case BHY2_SENSOR_ID_EXCAMERA:
+            callback = parse_scalar_u8;
+            break;
+        case BHY2_SENSOR_ID_STC:
+        case BHY2_SENSOR_ID_STC_WU:
+        case BHY2_SENSOR_ID_STC_LP:
+        case BHY2_SENSOR_ID_STC_LP_WU:
+            callback = parse_scalar_u32;
+            break;
+        case BHY2_SENSOR_ID_SIG:
+        case BHY2_SENSOR_ID_STD:
+        case BHY2_SENSOR_ID_STD_WU:
+        case BHY2_SENSOR_ID_TILT_DETECTOR:
+        case BHY2_SENSOR_ID_WAKE_GESTURE:
+        case BHY2_SENSOR_ID_GLANCE_GESTURE:
+        case BHY2_SENSOR_ID_PICKUP_GESTURE:
+        case BHY2_SENSOR_ID_SIG_LP:
+        case BHY2_SENSOR_ID_SIG_LP_WU:
+        case BHY2_SENSOR_ID_STD_LP:
+        case BHY2_SENSOR_ID_STD_LP_WU:
+        case BHY2_SENSOR_ID_WRIST_TILT_GESTURE:
+        case BHY2_SENSOR_ID_STATIONARY_DET:
+        case BHY2_SENSOR_ID_ANY_MOTION_LP:
+        case BHY2_SENSOR_ID_ANY_MOTION_LP_WU:
+        case BHI3_SENSOR_ID_NO_MOTION_LP_WU:
+        case BHY2_SENSOR_ID_MOTION_DET:
+        case BHI3_SENSOR_ID_WRIST_WEAR_LP_WU:
+            callback = parse_scalar_event;
+            break;
+        case BHY2_SENSOR_ID_AR:
+        case BHI3_SENSOR_ID_AR_WEAR_WU:
+            callback = parse_activity;
+            break;
+        case BHY2_SENSOR_ID_GPS:
+            callback = parse_gps;
+            break;
+        case BHI3_SENSOR_ID_WRIST_GEST_DETECT_LP_WU:
+            callback = parse_wrist_gesture_detect;
+            break;
+        case BHI3_SENSOR_ID_MULTI_TAP:
+            callback = parse_multitap;
             break;
         case BHY2_SENSOR_ID_AIR_QUALITY:
             callback = parse_air_quality;
@@ -996,6 +1054,25 @@ int8_t wrp_callback(uint8_t argc, uint8_t *argv[], void *ref)
 
     INFO("Executing %s %s\r\n", argv[0], argv[1]);
     wr_param((char *)argv[1], &cli_ref->bhy2);
+    PRINT("\r\n\r\n");
+
+    return CLI_OK;
+}
+
+int8_t physeninfo_help(void *ref)
+{
+    PRINT("  -p OR physeninfo <physical sensor id>\r\n");
+    PRINT("    \t= Display Physical Sensor Information of <physical sensor id>\r\n");
+
+    return CLI_OK;
+}
+
+int8_t physeninfo_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+
+    INFO("Executing %s %s\r\n", argv[0], argv[1]);
+    rd_phy_sensor_info((char *)argv[1], &cli_ref->bhy2);
     PRINT("\r\n\r\n");
 
     return CLI_OK;
@@ -2201,6 +2278,104 @@ void parse_swim(const struct bhy2_fifo_parse_data_info *callback_info, void *cal
     }
 }
 
+void parse_multitap(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref)
+{
+    uint32_t s, ns;
+    uint64_t tns;
+    struct parse_ref *parse_table = (struct parse_ref *)callback_ref;
+    uint8_t parse_flag;
+    struct parse_sensor_details *sensor_details;
+
+    enum bhi3_multi_tap_val multitap_data;
+
+    if (!parse_table || !callback_info)
+    {
+        ERROR("Null reference\r\r\n");
+
+        return;
+    }
+
+    sensor_details = parse_get_sensor_details(callback_info->sensor_id, parse_table);
+    if (!sensor_details)
+    {
+        ERROR("Parse slot not defined\r\n");
+
+        return;
+    }
+
+    parse_flag = sensor_details->parse_flag;
+    time_to_s_ns(*callback_info->time_stamp, &s, &ns, &tns);
+
+    bhi3_multi_tap_parse_data(callback_info->data_ptr, (uint8_t *)&multitap_data);
+
+    if (parse_flag & PARSE_FLAG_STREAM)
+    {
+        DATA("SID: %u; T: %lu.%09lu; %s; \r\n",
+             callback_info->sensor_id,
+             s,
+             ns,
+             bhi3_multi_tap_string_out[multitap_data]);
+    }
+
+    if (parse_flag & PARSE_FLAG_LOG)
+    {
+        log_data(callback_info->sensor_id,
+                 tns,
+                 callback_info->data_size - 1,
+                 callback_info->data_ptr,
+                 &parse_table->logdev);
+    }
+}
+
+void parse_wrist_gesture_detect(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref)
+{
+    uint32_t s, ns;
+    uint64_t tns;
+    struct parse_ref *parse_table = (struct parse_ref *)callback_ref;
+    uint8_t parse_flag;
+    struct parse_sensor_details *sensor_details;
+
+    struct bhi3_wrist_gesture_detect wrist_gesture_detect_data = { 0 };
+
+    if (!parse_table || !callback_info)
+    {
+        ERROR("Null reference\r\r\n");
+
+        return;
+    }
+
+    sensor_details = parse_get_sensor_details(callback_info->sensor_id, parse_table);
+    if (!sensor_details)
+    {
+        ERROR("Parse slot not defined\r\n");
+
+        return;
+    }
+
+    parse_flag = sensor_details->parse_flag;
+    time_to_s_ns(*callback_info->time_stamp, &s, &ns, &tns);
+
+    bhi3_wrist_gesture_detect_parse_data(callback_info->data_ptr, &wrist_gesture_detect_data);
+
+    if (parse_flag & PARSE_FLAG_STREAM)
+    {
+        DATA("SID: %u; T: %lu.%09lu; wrist_gesture: %s; \r\n",
+             callback_info->sensor_id,
+             s,
+             ns,
+             bhi3_wrist_gesture_detect_output[wrist_gesture_detect_data.wrist_gesture]);
+    }
+
+    if (parse_flag & PARSE_FLAG_LOG)
+    {
+        log_data(callback_info->sensor_id,
+                 tns,
+                 callback_info->data_size - 1,
+                 callback_info->data_ptr,
+                 &parse_table->logdev);
+    }
+}
+
 void bhy2_install_callbacks(struct bhy2_dev *bhy2, struct parse_ref *parse_table)
 {
     for (uint8_t i = 0; i < BHY2_MAX_SIMUL_SENSORS; i++)
@@ -2963,6 +3138,85 @@ static void wr_param(const char *payload, struct bhy2_dev *bhy2)
     PRINT("Writing parameter successful\r\n");
 }
 
+void rd_phy_sensor_info(const char *payload, struct bhy2_dev *bhy2)
+{
+    uint16_t param_id;
+    uint8_t sens_id;
+    struct bhy2_phys_sensor_info psi = { 0 };
+
+    sens_id = (uint8_t)atoi((char *)&payload[0]);
+    param_id = (uint16_t)(0x0120 | sens_id);
+
+    if (param_id >= 0x0121 && param_id <= 0x0160)
+    {
+        BHY2_ASSERT(bhy2_get_phys_sensor_info(sens_id, &psi, bhy2));
+        if (assert_rslt != BHY2_OK)
+        {
+            return;
+        }
+
+        PRINT("Field Name            hex                    | Value (dec)\r\n");
+        PRINT("----------------------------------------------------------\r\n");
+        PRINT("Physical Sensor ID    %02X                     | %d\r\n", psi.sensor_type, psi.sensor_type);
+        PRINT("Driver ID             %02X                     | %d\r\n", psi.driver_id, psi.driver_id);
+        PRINT("Driver Version        %02X                     | %d\r\n", psi.driver_version, psi.driver_version);
+        PRINT("Current Consumption   %02X                     | %0.3fmA\r\n",
+              psi.power_current,
+              psi.power_current / 10.f);
+        PRINT("Dynamic Range         %04X                   | %d\r\n", psi.curr_range.u16_val, psi.curr_range.u16_val);
+
+        const char *irq_status[2] = { "Disabled", "Enabled" };
+        const char *master_intf[5] = { "None", "SPI0", "I2C0", "SPI1", "I2C1" };
+        const char *power_mode[8] =
+        { "Sensor Not Present", "Power Down", "Suspend", "Self-Test", "Interrupt Motion", "One Shot",
+          "Low Power Active", "Active" };
+
+        PRINT("Flags                 %02X                     | IRQ status       : %s\r\n", psi.flags,
+              irq_status[psi.flags & 0x01]);
+        PRINT("                                             | Master interface : %s\r\n",
+              master_intf[(psi.flags >> 1) & 0x0F]);
+        PRINT("                                             | Power mode       : %s\r\n",
+              power_mode[(psi.flags >> 5) & 0x07]);
+        PRINT("Slave Address         %02X                     | %d\r\n", psi.slave_address, psi.slave_address);
+        PRINT("GPIO Assignment       %02X                     | %d\r\n", psi.gpio_assignment, psi.gpio_assignment);
+        PRINT("Current Rate          %08X               | %.3fHz\r\n", psi.curr_rate.u32_val, psi.curr_rate.f_val);
+        PRINT("Number of axes        %02X                     | %d\r\n", psi.num_axis, psi.num_axis);
+
+        #define INT4_TO_INT8(INT4)  ((int8_t)(((INT4) > 1) ? -1 : (INT4)))
+        struct bhy2_orient_matrix ort_mtx = { 0 };
+        ort_mtx.c[0] = INT4_TO_INT8(psi.orientation_matrix[0] & 0x0F);
+        ort_mtx.c[1] = INT4_TO_INT8(psi.orientation_matrix[0] >> 8);
+        ort_mtx.c[2] = INT4_TO_INT8(psi.orientation_matrix[1] & 0x0F);
+        ort_mtx.c[3] = INT4_TO_INT8(psi.orientation_matrix[1] >> 8);
+        ort_mtx.c[4] = INT4_TO_INT8(psi.orientation_matrix[2] & 0x0F);
+        ort_mtx.c[5] = INT4_TO_INT8(psi.orientation_matrix[2] >> 8);
+        ort_mtx.c[6] = INT4_TO_INT8(psi.orientation_matrix[3] & 0x0F);
+        ort_mtx.c[7] = INT4_TO_INT8(psi.orientation_matrix[3] >> 8);
+        ort_mtx.c[8] = INT4_TO_INT8(psi.orientation_matrix[4] & 0x0F);
+
+        PRINT("Orientation Matrix    %02X%02X%02X%02X%02X             | %+02d %+02d %+02d |\r\n",
+              psi.orientation_matrix[0],
+              psi.orientation_matrix[1],
+              psi.orientation_matrix[2],
+              psi.orientation_matrix[3],
+              psi.orientation_matrix[4],
+              ort_mtx.c[0],
+              ort_mtx.c[1],
+              ort_mtx.c[2]);
+        PRINT("                                             | %+02d %+02d %+02d |\r\n",
+              ort_mtx.c[3],
+              ort_mtx.c[4],
+              ort_mtx.c[5]);
+        PRINT("                                             | %+02d %+02d %+02d |\r\n",
+              ort_mtx.c[6],
+              ort_mtx.c[7],
+              ort_mtx.c[8]);
+        PRINT("Reserved              %02X                     | %d\r\n", psi.reserved, psi.reserved);
+        PRINT("\r\n");
+
+    }
+}
+
 static void erase_flash(uint32_t end_addr, struct bhy2_dev *bhy2)
 {
     int8_t rslt;
@@ -3616,7 +3870,7 @@ static void klio_load_pattern(const char *arg1, const char *arg2, struct bhy2_de
     uint16_t size = pattern_blob_to_bytes((uint8_t *)arg2, (uint8_t *)pattern_data);
     int index = atoi(arg1);
 
-    if (size == klio_vars.max_pattern_blob_size)
+    if (size <= klio_vars.max_pattern_blob_size)
     {
         if (index < klio_vars.max_patterns)
         {
@@ -3923,17 +4177,15 @@ int8_t dmode_callback(uint8_t argc, uint8_t *argv[], void *ref)
 
 int8_t dinject_help(void *ref)
 {
-    PRINT("  dinject <sensor id>:<frequency>[:<latency>] <input_file.txt>\r\n");
-    PRINT("    \t -Activate sensor <sensor id> at specified sample rate <frequency>Hz and with latency <latency>ms,\r\n");
+    PRINT("  dinject <input_file.txt>\r\n");
     PRINT("    \t -Pass the name of the input file <input_filename.txt>\r\n");
-    PRINT("  Eg:  dinject 114 field_log.txt\r\n\r\n");
-    PRINT("  For Logging Mode -\r\n");
-    PRINT(
-        "  Command Flow: attlog outx logse 114:100 dmode s dinject 114 field_log.txt dmode n logse 114:0 detlog outx\r\n");
+    PRINT("   Eg:  dinject field_log.txt\r\n\r\n");
+    PRINT("   For Logging Mode -\r\n");
+    PRINT("  Command Flow: attlog outx logse 114:100 dmode s dinject field_log.txt dmode n logse 114:0 detlog outx\r\n");
     PRINT("  For Streaming Mode -\r\n");
-    PRINT("  Command Flow: actse 114:100 dmode s dinject 114 field_log.txt dmode n actse 114:0 \r\n\r\n");
+    PRINT("  Command Flow: actse 114:100 dmode s dinject field_log.txt dmode n actse 114:0 \r\n\r\n");
     PRINT(
-        "  Note:Ensure that the Data Injection firmware is loaded and the sensor is configured prior to executing Data Injection\r\n\r\n");
+        "  Note:Ensure that the requisite application specific Data Injection firmware is loaded and the sensor is configured prior to executing Data Injection\r\n\r\n");
 
     return CLI_OK;
 }
@@ -3942,29 +4194,33 @@ int8_t dinject_callback(uint8_t argc, uint8_t *argv[], void *ref)
 {
     struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
     int8_t injection_state = DINJECT_IN_PROGRESS;
+    uint8_t hex_data;
 
-    /*! Get the Sensor ID */
-    int id = atoi((char *)argv[1]);
+    memset(&dinject, 0, sizeof(struct data_inject));
 
     /*! Initialize the Data Injection Structure */
-    BHY2_ASSERT(dinject_init(id, (char*)argv[2], &dinject, &cli_ref->bhy2));
-    coines_delay_msec(100); /*Added for stability */
+    BHY2_ASSERT(dinject_init((char*)argv[1], &dinject, &cli_ref->bhy2));
 
-    /*! Inject Large Timestamp and Data Sample*/
-    BHY2_ASSERT(dinject_log_init(&dinject, &cli_ref->bhy2));
-    coines_delay_msec(100); /*Added for stability [Fix for timestamp not updating issue] */
+    /*    coines_delay_msec(100); / *Added for stability. Maintained for future reference * / */
 
-    /*! Perform Data Injection*/
     while (injection_state == DINJECT_IN_PROGRESS)
     {
+
         if (get_interrupt_status())
         {
             /*! Data from the FIFO is read and the relevant callback if registered are called */
             BHY2_ASSERT(bhy2_get_and_process_fifo(fifo_buffer, sizeof(fifo_buffer), &cli_ref->bhy2));
 
-            /*! Data from the Input Log File is injected to relevant virtual sensor driver */
-            injection_state = dinject_inject_data(&dinject.sensor_block_size, &dinject, &cli_ref->bhy2);
+            /*            coines_delay_msec(5); / *Added for stability. Maintained for future reference * / */
         }
+
+        /*! Read '1' '8Bit Hex Data' */
+        dinject_parse_file(dinject.in_log_ptr, _8BIT_HEX_LEN, 1, &hex_data);
+
+        /*! Data from the Input Log File is injected to relevant virtual sensor driver */
+        injection_state = dinject_inject_data(hex_data, &dinject, &cli_ref->bhy2);
+
+        coines_delay_msec(1);
     }
 
     /*! Close the Log file and reset the buffer parameters */
@@ -3974,6 +4230,78 @@ int8_t dinject_callback(uint8_t argc, uint8_t *argv[], void *ref)
     memset(fifo_buffer, 0, sizeof(fifo_buffer)); /*Local Buffer */
     BHY2_ASSERT(bhy2_clear_fifo(0xFF, &cli_ref->bhy2)); /*Read and Flush Wakeup and Non-Wakeup FIFO */
     BHY2_ASSERT(bhy2_clear_fifo(0xFE, &cli_ref->bhy2)); /*Flush all the FIFOs */
+
+    return CLI_OK;
+}
+
+int8_t pm_help(void *ref)
+{
+    PRINT("  -m OR postm <pm_log_filename.bin>\r\n");
+    PRINT("    \t -Pass <pm_log_filename.bin> to log the post mortem information\r\n");
+
+    return CLI_OK;
+}
+
+int8_t pm_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    struct bhy2_post_mortem post_mortem_data = { 0 };
+    int8_t rslt;
+    uint8_t error_value = 0, chip_ctrl_value = 0;
+
+    /*! Check the Error Status */
+    rslt = bhy2_get_regs(BHY2_REG_ERROR_VALUE, &error_value, 1, &cli_ref->bhy2);
+
+    PRINT("Error Reg Value : %x\r\n", error_value);
+
+    if ((error_value == PM_DATA_AVAILABLE) || (error_value == WATCH_DOG_RESET) || (error_value == FATAL_FIRMWARE_ERROR))
+    {
+        /*! Get the Post Mortem data */
+        rslt = get_post_mortem_data(&post_mortem_data, &cli_ref->bhy2);
+        if (rslt != BHY2_OK)
+        {
+            PRINT("Post Mortem Data Retrieval Failed. Error : %d\r\n", rslt);
+
+            return rslt;
+        }
+
+        /*! Log the Post Mortem data */
+        rslt = log_post_mortem_data((char *)argv[1], &post_mortem_data, sizeof(struct bhy2_post_mortem));
+        if (rslt != PM_LOG_SUCCESS)
+        {
+            PRINT("Post Mortem Data Logging Failed. Error : %d\r\n", rslt);
+
+            return rslt;
+        }
+
+#if PM_DEBUG
+
+        /*! Print the post mortem data */
+        rslt = print_post_mortem_data(&post_mortem_data);
+        if (rslt != PM_PARSE_SUCCESS)
+        {
+            PRINT("Post Mortem Data Parsing Failed. \r\n");
+
+            return rslt;
+        }
+
+#endif
+
+        memset((uint8_t*)&post_mortem_data, 0, sizeof(struct bhy2_post_mortem));
+
+        /*! Read the Chip Control Register */
+        rslt = bhy2_get_regs(BHY2_REG_CHIP_CTRL, &chip_ctrl_value, 1, &cli_ref->bhy2);
+
+        /*! Configure Chip Register to Clear Error and Debug Registers */
+        uint8_t clr_err = chip_ctrl_value | BHY2_CHIP_CTRL_CLR_ERR_REG;
+        rslt = bhy2_set_regs(BHY2_REG_CHIP_CTRL, &clr_err, 1, &cli_ref->bhy2);
+    }
+    else
+    {
+        PRINT("No Fatal error observed. Post Mortem Data not available. \r\n");
+    }
+
+    PRINT("\r\n");
 
     return CLI_OK;
 }
@@ -4015,6 +4343,10 @@ int8_t lsactse_callback(uint8_t argc, uint8_t *argv[], void *ref)
 {
     uint8_t act_sensors = 0;
 
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    struct bhy2_virt_sensor_conf act_sensor_conf;
+    struct parse_sensor_details *sensor_details;
+
     /*! Check the Sensor status */
     for (uint16_t i = 0; i < 256; i++)
     {
@@ -4026,7 +4358,14 @@ int8_t lsactse_callback(uint8_t argc, uint8_t *argv[], void *ref)
                 PRINT("Active Sensors -\r\n");
             }
 
-            PRINT("Sensor %d is Active\r\n", i);
+            BHY2_ASSERT(bhy2_get_virt_sensor_cfg(i, &act_sensor_conf, &cli_ref->bhy2));
+
+            sensor_details = parse_get_sensor_details(i, &cli_ref->parse_table);
+            PRINT("SID : %3d \t ODR : %4.2f \t R : %4d \t Acquisition : %s\r\n",
+                  i,
+                  act_sensor_conf.sample_rate,
+                  act_sensor_conf.range,
+                  (sensor_details->parse_flag == PARSE_FLAG_STREAM) ? "Streaming" : "Logging");
         }
     }
 
@@ -4035,6 +4374,801 @@ int8_t lsactse_callback(uint8_t argc, uint8_t *argv[], void *ref)
     {
         PRINT("No Active Sensors\r\n");
     }
+
+    if (cli_ref->parse_table.logdev.logfile != NULL)
+    {
+        PRINT("Attached Log File : %s\r\n", cli_ref->parse_table.logdev.logfilename);
+    }
+    else
+    {
+        PRINT("No File attached for Logging\r\n");
+    }
+
+    return CLI_OK;
+}
+
+int8_t mtapen_help(void *ref)
+{
+    PRINT("  mtapen <tap-setting>\r\n");
+    PRINT("    \t -Enable the Multi Tap Configuration \r\n");
+    PRINT("    \t -0 : No Tap \r\n");
+    PRINT("    \t -1 : Single Tap \r\n");
+    PRINT("    \t -2 : Double Tap \r\n");
+    PRINT("    \t -3 : Double Single Tap \r\n");
+    PRINT("    \t -4 : Triple Tap \r\n");
+    PRINT("    \t -5 : Triple Single Tap \r\n");
+    PRINT("    \t -6 : Triple Double Tap \r\n");
+    PRINT("    \t -7 : Triple Double Single Tap \r\n");
+
+    return CLI_OK;
+}
+
+int8_t mtapen_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    int8_t rslt = BHY2_OK;
+
+    enum bhi3_multi_tap_val multitap_setting = (uint8_t)atoi((char *)argv[1]);
+
+    rslt = bhi3_multi_tap_set_config((uint8_t *)&multitap_setting, &cli_ref->bhy2);
+
+    if (rslt != BHY2_OK)
+    {
+        ERROR("Multi Tap Parameter Set Failed \r\n");
+
+        return rslt;
+    }
+
+    PRINT("Multi Tap Parameter set to  %s\r\n", bhi3_multi_tap_string_out[multitap_setting]);
+
+    return CLI_OK;
+}
+
+int8_t mtapinfo_help(void *ref)
+{
+    PRINT("  mtapinfo \r\n");
+    PRINT("    \t -Get the Multi Tap Info\r\n");
+
+    return CLI_OK;
+}
+
+int8_t mtapinfo_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    int8_t rslt = BHY2_OK;
+    uint16_t len = BHY2_LE24MUL(BHI3_MULTI_TAP_ENABLE_LENGTH);
+    uint8_t buffer[len];
+
+    rslt = bhi3_multi_tap_get_config((uint8_t *)buffer, &cli_ref->bhy2);
+
+    if (rslt != BHY2_OK)
+    {
+        ERROR("Multi Tap Parameter Get Failed \r\n");
+
+        return rslt;
+    }
+
+    PRINT("Multi Tap Info : %s\r\n", bhi3_multi_tap_string_out[buffer[0]]);
+
+    return CLI_OK;
+}
+
+int8_t mtapsetcnfg_help(void *ref)
+{
+    PRINT("  mtapsetcnfg <s_cnfg> <d_cnfg> <t_cnfg> \r\n");
+    PRINT("    \t -Set the Multi Tap Configurations (in Hex)\r\n");
+    PRINT("    \t -<s_cnfg> : Single Tap Configuration\r\n");
+    PRINT("    \t\t -<s_cnfg> : <0x00>|<mode|max_pks_for_tap|<wait_for_timeout|axis_sel> [MSB->LSB]\r\n");
+    PRINT("    \t\t -<mode> : <Robust/Normal/Sensitive> -> <2/1/0>\r\n");
+    PRINT("    \t\t -<max_pks_for_tap> : 6\r\n");
+    PRINT("    \t\t -<wait_for_timeout> : <Robust/Normal/Sensitive> -> <2/1/0>\r\n");
+    PRINT("    \t\t -<axis_sel> : <Z/Y/X> -> <2/1/0>\r\n");
+    PRINT("    \t -<d_cnfg> : Double Tap Configuration\r\n");
+    PRINT("    \t\t -<d_cnfg> : <max_ges_dur>|<tap_peak_thrs> [MSB->LSB]\r\n");
+    PRINT("    \t\t -<max_ges_dur> : <15:10> -> 0 to 2520ms at resolution of 40ms\r\n");
+    PRINT("    \t\t -<tap_peak_thrs> : <9:0> -> 0 to 2000mg at resolution of 1.953mg \r\n");
+    PRINT("    \t -<t_cnfg> : Triple Tap Configuration\r\n");
+    PRINT(
+        "    \t\t -<t_cnfg> : <quite_time_after_ges>|<min_quite_dur_bw_taps>|<tap_shock_settl_dur>|<max_dur_bw_pks> [MSB->LSB]\r\n");
+    PRINT("    \t\t -<quite_time_after_ges> : <15:12> -> 0 to 75ms at resolution of 5ms\r\n");
+    PRINT("    \t\t -<min_quite_dur_bw_taps> : <11:8> -> 0 to 75ms at resolution of 5ms \r\n");
+    PRINT("    \t\t -<tap_shock_settl_dur> : <7:4> -> 0 to 75ms at resolution of 5ms\r\n");
+    PRINT("    \t\t -<max_dur_bw_pks> : <3:0> -> 0 to 600ms at resolution of 40ms \r\n");
+
+    return CLI_OK;
+}
+
+int8_t mtapsetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    int8_t rslt = BHY2_OK;
+
+    bhi3_multi_tap_detector_t multitap_cnfg;
+
+    multitap_cnfg.stap_setting.as_uint16 = string_to_int((char *)argv[1]);
+    multitap_cnfg.dtap_setting.as_uint16 = string_to_int((char *)argv[2]);
+    multitap_cnfg.ttap_setting.as_uint16 = string_to_int((char *)argv[3]);
+
+    rslt = bhi3_multi_tap_detector_set_config((uint8_t *)&multitap_cnfg, &cli_ref->bhy2);
+
+    if (rslt != BHY2_OK)
+    {
+        ERROR("Multi Tap Detector Parameter Set Failed \r\n");
+
+        return rslt;
+    }
+
+    PRINT("Multi Tap Detector Parameter set successfully \r\n");
+
+    return CLI_OK;
+}
+
+int8_t mtapgetcnfg_help(void *ref)
+{
+    PRINT("  mtapgetcnfg \r\n");
+    PRINT("    \t -Get the Multi Tap Configurations\r\n");
+
+    return CLI_OK;
+}
+
+int8_t mtapgetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    int8_t rslt = BHY2_OK;
+    uint16_t len = BHY2_LE24MUL(BHI3_MULTI_TAP_DETECTOR_CONFIG_LENGTH);
+    uint8_t buffer[len];
+    bhi3_multi_tap_detector_t multitap_cnfg;
+
+    rslt = bhi3_multi_tap_detector_get_config((uint8_t *)buffer, &cli_ref->bhy2);
+
+    if (rslt != BHY2_OK)
+    {
+        ERROR("Multi Tap Parameter Get Failed \r\n");
+
+        return rslt;
+    }
+
+    multitap_cnfg.stap_setting.as_s.axis_sel = (buffer[0] & BHI3_SINGLE_TAP_AXIS_SEL_MASK);
+    multitap_cnfg.stap_setting.as_s.wait_for_timeout =
+        ((buffer[0] & BHI3_SINGLE_TAP_WAIT_TIMEOUT_MASK) >> BHI3_SINGLE_TAP_WAIT_TIMEOUT_SHIFT);
+    multitap_cnfg.stap_setting.as_s.max_peaks_for_tap =
+        ((buffer[0] & BHI3_SINGLE_TAP_MAX_PEAKS_FOR_TAP_MASK) >> BHI3_SINGLE_TAP_MAX_PEAKS_FOR_TAP_SHIFT);
+    multitap_cnfg.stap_setting.as_s.mode =
+        ((buffer[0] & BHI3_SINGLE_TAP_FILTER_MODE_MASK) >> BHI3_SINGLE_TAP_FILTER_MODE_SHIFT);
+    multitap_cnfg.dtap_setting.as_s.tap_peak_thres = (BHY2_LE2U16(buffer + 2) & BHI3_DOUBLE_TAP_TAP_PEAK_DUR_MASK);
+    multitap_cnfg.dtap_setting.as_s.max_gesture_dur =
+        ((BHY2_LE2U16(buffer + 2) & BHI3_DOUBLE_TAP_MAX_GES_DUR_MASK) >> BHI3_DOUBLE_TAP_MAX_GES_DUR_SHIFT);
+    multitap_cnfg.ttap_setting.as_s.max_dur_between_peaks = (buffer[4] & BHI3_TRIPLE_TAP_MAX_DUR_BW_PEAKS_MASK);
+    multitap_cnfg.ttap_setting.as_s.tap_shock_settling_dur =
+        ((buffer[4] & BHI3_TRIPLE_TAP_TAP_SHOCK_SETL_DUR_MASK) >> BHI3_TRIPLE_TAP_TAP_SHOCK_SETL_DUR_SHIFT);
+    multitap_cnfg.ttap_setting.as_s.min_quite_dur_between_taps = (buffer[5] & BHI3_TRIPLE_TAP_MIN_QT_DUR_BW_PEAKS_MASK);
+    multitap_cnfg.ttap_setting.as_s.quite_time_after_gesture =
+        ((buffer[5] & BHI3_TRIPLE_TAP_QT_TM_AFTER_GESTURE_MASK) >> BHI3_TRIPLE_TAP_QT_TM_AFTER_GESTURE_SHIFT);
+
+    PRINT("Single Tap CNFG : 0x%04x\r\n", BHY2_LE2U16(buffer));
+    PRINT("    \t\t -<axis_sel> : %d\r\n", multitap_cnfg.stap_setting.as_s.axis_sel);
+    PRINT("    \t\t -<wait_for_timeout> : %d\r\n", multitap_cnfg.stap_setting.as_s.wait_for_timeout);
+    PRINT("    \t\t -<max_pks_for_tap> : %d\r\n", multitap_cnfg.stap_setting.as_s.max_peaks_for_tap);
+    PRINT("    \t\t -<mode> : %d\r\n", multitap_cnfg.stap_setting.as_s.mode);
+    PRINT("Double Tap CNFG : 0x%04x\r\n", BHY2_LE2U16(buffer + 2));
+    PRINT("    \t\t -<tap_peak_thrs> : %d\r\n", multitap_cnfg.dtap_setting.as_s.tap_peak_thres);
+    PRINT("    \t\t -<max_ges_dur> : %d\r\n", multitap_cnfg.dtap_setting.as_s.max_gesture_dur);
+    PRINT("Triple Tap CNFG : 0x%04x\r\n", BHY2_LE2U16(buffer + 4));
+    PRINT("    \t\t -<max_dur_bw_pks> : %d\r\n", multitap_cnfg.ttap_setting.as_s.max_dur_between_peaks);
+    PRINT("    \t\t -<tap_shock_settl_dur> : %d\r\n", multitap_cnfg.ttap_setting.as_s.tap_shock_settling_dur);
+    PRINT("    \t\t -<min_quite_dur_bw_taps> : %d\r\n", multitap_cnfg.ttap_setting.as_s.min_quite_dur_between_taps);
+    PRINT("    \t\t -<quite_time_after_ges> : %d\r\n", multitap_cnfg.ttap_setting.as_s.quite_time_after_gesture);
+
+    return CLI_OK;
+}
+
+int8_t accsetfoc_help(void *ref)
+{
+    PRINT("  accsetfoc <x> <y> <z> \r\n");
+    PRINT("    \t -Set the Accelerometer Fast Offset Calibration (in Hex)\r\n");
+    PRINT("    \t -Range of Accelerometer FOC value : -128 to 127 [8Bit Resolution]\r\n");
+    PRINT("    \t accsetfoc 0x0072 0x0064 0x0080\r\n");
+
+    return CLI_OK;
+}
+
+int8_t accsetfoc_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    struct bhy2_data_xyz accfoc = { 0 };
+
+    accfoc.x = string_to_int((char *)argv[1]);
+    accfoc.y = string_to_int((char *)argv[2]);
+    accfoc.z = string_to_int((char *)argv[3]);
+
+    BHY2_ASSERT(bhi3_set_acc_foc(&accfoc, &cli_ref->bhy2));
+
+    PRINT("Set the Accelerometer Fast Offset Calibration \r\n");
+
+    return CLI_OK;
+}
+
+int8_t accgetfoc_help(void *ref)
+{
+    PRINT("  accgetfoc \r\n");
+    PRINT("    \t -Get the Accelerometer Fast Offset Calibration\r\n");
+    PRINT("    \t -Range of Accelerometer FOC value : -128 to 127 [8Bit Resolution]\r\n");
+
+    return CLI_OK;
+}
+
+int8_t accgetfoc_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    struct bhy2_data_xyz accfoc = { 0 };
+
+    BHY2_ASSERT(bhi3_get_acc_foc(&accfoc, &cli_ref->bhy2));
+
+    PRINT("Accelerometer Fast Offset Calibration : \r\nx : 0x%04x, y : 0x%04x, z : 0x%04x\r\n", (uint16_t)accfoc.x,
+          (uint16_t)accfoc.y, (uint16_t)accfoc.z);
+
+    return CLI_OK;
+}
+
+int8_t accsetpwm_help(void *ref)
+{
+    PRINT("  accsetpwm <power_mode> \r\n");
+    PRINT("    \t -Set the Accelerometer Power Mode\r\n");
+    PRINT("    \t -'0' corresponds to Normal Mode\r\n");
+    PRINT("    \t -'2' corresponds to Low Power Mode\r\n");
+
+    return CLI_OK;
+}
+
+int8_t accsetpwm_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    enum bhi3_phy_sensor_power_mode accpwm = 0;
+
+    accpwm = (uint8_t)atoi((char *)argv[1]);
+    BHY2_ASSERT(bhi3_set_acc_power_mode((uint8_t *)&accpwm, &cli_ref->bhy2));
+
+    PRINT("Set the Accelerometer Power Mode to %s\r\n", bhi3_phy_sensor_pwm_output[accpwm]);
+
+    return CLI_OK;
+}
+
+int8_t accgetpwm_help(void *ref)
+{
+    PRINT("  accgetpwm \r\n");
+    PRINT("    \t -Get the Accelerometer Power Mode\r\n");
+
+    return CLI_OK;
+}
+
+int8_t accgetpwm_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    enum bhi3_phy_sensor_power_mode accpwm = 0;
+
+    BHY2_ASSERT(bhi3_get_acc_power_mode((uint8_t *)&accpwm, &cli_ref->bhy2));
+
+    PRINT("Accelerometer Power Mode : %s\r\n", bhi3_phy_sensor_pwm_output[accpwm]);
+
+    return CLI_OK;
+}
+
+int8_t gyrosetfoc_help(void *ref)
+{
+    PRINT("  gyrosetfoc <x> <y> <z> \r\n");
+    PRINT("    \t -Set the Gyroscope Fast Offset Calibration (in Hex)\r\n");
+    PRINT("    \t -Range of Gyroscope FOC value : -512 to 511 [10Bit Resolution]\r\n");
+    PRINT("    \t gyrosetfoc 0xff16 0x00f8 0x0200\r\n");
+
+    return CLI_OK;
+}
+
+int8_t gyrosetfoc_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    struct bhy2_data_xyz gyrofoc = { 0 };
+
+    gyrofoc.x = string_to_int((char *)argv[1]);
+    gyrofoc.y = string_to_int((char *)argv[2]);
+    gyrofoc.z = string_to_int((char *)argv[3]);
+
+    BHY2_ASSERT(bhi3_set_gyro_foc(&gyrofoc, &cli_ref->bhy2));
+
+    PRINT("Set the Gyroscope Fast Offset Calibration \r\n");
+
+    return CLI_OK;
+}
+
+int8_t gyrogetfoc_help(void *ref)
+{
+    PRINT("  gyrogetfoc \r\n");
+    PRINT("    \t -Get the Gyroscope Fast Offset Calibration\r\n");
+    PRINT("    \t -Range of Gyroscope FOC value : -512 to 511 [10Bit Resolution]\r\n");
+
+    return CLI_OK;
+}
+
+int8_t gyrogetfoc_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    struct bhy2_data_xyz gyrofoc = { 0 };
+
+    BHY2_ASSERT(bhi3_get_gyro_foc(&gyrofoc, &cli_ref->bhy2));
+
+    PRINT("Gyroscope Fast Offset Calibration : \r\nx : 0x%04x, y : 0x%04x, z : 0x%04x\r\n", (uint16_t)gyrofoc.x,
+          (uint16_t)gyrofoc.y, (uint16_t)gyrofoc.z);
+
+    return CLI_OK;
+}
+
+int8_t gyrosetois_help(void *ref)
+{
+    PRINT("  gyrosetois <enable/disable> \r\n");
+    PRINT("    \t -Set the Gyroscope OIS state\r\n");
+    PRINT("    \t -1/0 : Enable/Disable OIS\r\n");
+
+    return CLI_OK;
+}
+
+int8_t gyrosetois_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    uint8_t gyroois = 0;
+
+    gyroois = (uint8_t)atoi((char *)argv[1]);
+    BHY2_ASSERT(bhi3_set_gyro_ois(&gyroois, &cli_ref->bhy2));
+
+    PRINT("Gyroscope OIS %s\r\n", (gyroois == BHI3_PHY_GYRO_ENABLE_OIS) ? "Enabled" : "Disabled");
+
+    return CLI_OK;
+}
+
+int8_t gyrogetois_help(void *ref)
+{
+    PRINT("  gyrogetois \r\n");
+    PRINT("    \t -Get the Gyroscope OIS status \r\n");
+
+    return CLI_OK;
+}
+
+int8_t gyrogetois_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    uint8_t gyroois = 0;
+
+    BHY2_ASSERT(bhi3_get_gyro_ois(&gyroois, &cli_ref->bhy2));
+
+    PRINT("Gyroscope OIS Status : %s\r\n", (gyroois == BHI3_PHY_GYRO_ENABLE_OIS) ? "Enabled" : "Disabled");
+
+    return CLI_OK;
+}
+
+int8_t gyrosetfs_help(void *ref)
+{
+    PRINT("  gyrosetfs <enable/disable> \r\n");
+    PRINT("    \t -Set the Gyroscope Fast Startup\r\n");
+    PRINT("    \t -1/0 : Enable/Disable Fast startup\r\n");
+
+    return CLI_OK;
+}
+
+int8_t gyrosetfs_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    uint8_t gyrofs = 0;
+
+    gyrofs = (uint8_t)atoi((char *)argv[1]);
+    BHY2_ASSERT(bhi3_set_gyro_fast_startup(&gyrofs, &cli_ref->bhy2));
+
+    PRINT("Gyroscope Fast Startup %s\r\n", (gyrofs == BHI3_PHY_GYRO_ENABLE_FAST_STARTUP) ? "Enabled" : "Disabled");
+
+    return CLI_OK;
+}
+
+int8_t gyrogetfs_help(void *ref)
+{
+    PRINT("  gyrogetfs \r\n");
+    PRINT("    \t -Get the Gyroscope Fast Startup status \r\n");
+
+    return CLI_OK;
+}
+
+int8_t gyrogetfs_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    uint8_t gyrofs = 0;
+
+    BHY2_ASSERT(bhi3_get_gyro_fast_startup(&gyrofs, &cli_ref->bhy2));
+
+    PRINT("Gyroscope Fast Startup Status : %s\r\n",
+          (gyrofs == BHI3_PHY_GYRO_ENABLE_FAST_STARTUP) ? "Enabled" : "Disabled");
+
+    return CLI_OK;
+}
+
+int8_t gyrosetcrt_help(void *ref)
+{
+    PRINT("  gyrosetcrt \r\n");
+    PRINT("    \t -Start Gyroscope CRT\r\n");
+
+    return CLI_OK;
+}
+
+int8_t gyrosetcrt_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    uint8_t gyrocrt = 0;
+
+    gyrocrt = BHI3_PHY_GYRO_ENABLE_CRT;
+    BHY2_ASSERT(bhi3_set_gyro_crt(&gyrocrt, &cli_ref->bhy2));
+
+    PRINT("Gyroscope CRT %s\r\n", (gyrocrt == BHI3_PHY_GYRO_ENABLE_CRT) ? "Enabled" : "Disabled");
+
+    return CLI_OK;
+}
+
+int8_t gyrogetcrt_help(void *ref)
+{
+    PRINT("  gyrogetcrt \r\n");
+    PRINT("    \t -Get the Gyroscope CRT status \r\n");
+
+    return CLI_OK;
+}
+
+int8_t gyrogetcrt_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    uint8_t gyrocrt[4] = { 0 };
+
+    BHY2_ASSERT(bhi3_get_gyro_crt(gyrocrt, &cli_ref->bhy2));
+
+    PRINT("Gyroscope CRT Status : %s\r\n", (gyrocrt[0] == BHI3_PHY_GYRO_CRT_STATUS_SUCCESS) ? "Successful" : "Failed");
+
+    return CLI_OK;
+}
+
+int8_t gyrosetpwm_help(void *ref)
+{
+    PRINT("  gyrosetpwm <power_mode> \r\n");
+    PRINT("    \t -Set the Gyroscope Power Mode\r\n");
+    PRINT("    \t -'0' corresponds to Normal Mode\r\n");
+    PRINT("    \t -'2' corresponds to Low Power Mode\r\n");
+
+    return CLI_OK;
+}
+
+int8_t gyrosetpwm_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    enum bhi3_phy_sensor_power_mode gyropwm = 0;
+
+    gyropwm = (uint8_t)atoi((char *)argv[1]);
+    BHY2_ASSERT(bhi3_set_gyro_power_mode((uint8_t *)&gyropwm, &cli_ref->bhy2));
+
+    PRINT("Set the Gyroscope Power Mode to %s\r\n", bhi3_phy_sensor_pwm_output[gyropwm]);
+
+    return CLI_OK;
+}
+
+int8_t gyrogetpwm_help(void *ref)
+{
+    PRINT("  gyrogetpwm \r\n");
+    PRINT("    \t -Get the Gyroscope Power Mode\r\n");
+
+    return CLI_OK;
+}
+
+int8_t gyrogetpwm_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    enum bhi3_phy_sensor_power_mode gyropwm = 0;
+
+    BHY2_ASSERT(bhi3_get_gyro_power_mode((uint8_t *)&gyropwm, &cli_ref->bhy2));
+
+    PRINT("Gyroscope Power Mode : %s\r\n", bhi3_phy_sensor_pwm_output[gyropwm]);
+
+    return CLI_OK;
+}
+
+int8_t gyrosettat_help(void *ref)
+{
+    PRINT("  gyrosettat <enable/disable> \r\n");
+    PRINT("    \t -Set the Gyroscope Timer Auto Trim state\r\n");
+    PRINT("    \t -1/0 : Enable/Disable Timer Auto Trim\r\n");
+
+    return CLI_OK;
+}
+
+int8_t gyrosettat_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    uint8_t gyrotat = 0;
+
+    gyrotat = (uint8_t)atoi((char *)argv[1]);
+    BHY2_ASSERT(bhi3_set_gyro_timer_auto_trim(&gyrotat, &cli_ref->bhy2));
+
+    PRINT("Gyroscope Timer Auto Trim %s\r\n",
+          (gyrotat == BHI3_PHY_GYRO_ENABLE_TIMER_AUTO_TRIM) ? "Enabled" : "Disabled");
+
+    return CLI_OK;
+}
+
+int8_t gyrogettat_help(void *ref)
+{
+    PRINT("  gyrogettat \r\n");
+    PRINT("    \t -Get the Gyroscope Timer Auto Trim status \r\n");
+
+    return CLI_OK;
+}
+
+int8_t gyrogettat_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    uint8_t gyrotat = 0;
+
+    BHY2_ASSERT(bhi3_get_gyro_timer_auto_trim(&gyrotat, &cli_ref->bhy2));
+
+    PRINT("Gyroscope Timer Auto Trim Status : %s\r\n",
+          (gyrotat == BHI3_PHY_GYRO_ENABLE_TIMER_AUTO_TRIM) ? "Enabled" : "Disabled");
+
+    return CLI_OK;
+}
+
+int8_t wwwsetcnfg_help(void *ref)
+{
+    PRINT("  wwwsetcnfg <maf> <manf> <alr> <all> <apd> <apu> <mdm> <mdq>\r\n");
+    PRINT("    \t -Set the Wrist Wear Wakeup Configuration\r\n");
+    PRINT("    \t <maf> : min_angle_focus (u16), range 1024 to 1774\r\n");
+    PRINT("    \t <manf> : min_angle_nonfocus(u16), range 1448 to 1856\r\n");
+    PRINT("    \t <alr> : angle_landscape_right (u8), range 88 to 128\r\n");
+    PRINT("    \t <all> : angle_landscape_left(u8), range 88 to 128\r\n");
+    PRINT("    \t <apd> : angle_portrait_down (u8), range 0 to 179\r\n");
+    PRINT("    \t <apu> : angle_portrait_up(u8), range 222 to 247\r\n");
+    PRINT("    \t <mdm> : min_dur_moved (u8), range 1 to 10s, in steps of 20ms\r\n");
+    PRINT("    \t <mdq> : min_dur_quite(u8), range 1 to 10s, in steps of 20ms\r\n");
+
+    return CLI_OK;
+}
+
+int8_t wwwsetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    bhi3_wrist_wear_wakeup_config_param_t www = { 0 };
+
+    www.min_angle_focus = (uint16_t)atoi((char *)argv[1]);
+    www.min_angle_nonfocus = (uint16_t)atoi((char *)argv[2]);
+    www.angle_landscape_right = (uint8_t)atoi((char *)argv[3]);
+    www.angle_landscape_left = (uint8_t)atoi((char *)argv[4]);
+    www.angle_portrait_down = (uint8_t)atoi((char *)argv[5]);
+    www.angle_portrait_up = (uint8_t)atoi((char *)argv[6]);
+    www.min_dur_moved = (uint8_t)atoi((char *)argv[7]);
+    www.min_dur_quite = (uint8_t)atoi((char *)argv[8]);
+
+    PRINT("min_angle_focus : %d\r\n", www.min_angle_focus);
+    PRINT("min_angle_nonfocus : %d\r\n", www.min_angle_nonfocus);
+    PRINT("angle_landscape_right : %d\r\n", www.angle_landscape_right);
+    PRINT("angle_landscape_left : %d\r\n", www.angle_landscape_left);
+    PRINT("angle_portrait_down : %d\r\n", www.angle_portrait_down);
+    PRINT("angle_portrait_up : %d\r\n", www.angle_portrait_up);
+    PRINT("min_dur_moved : %d\r\n", www.min_dur_moved);
+    PRINT("min_dur_quite : %d\r\n", www.min_dur_quite);
+
+    BHY2_ASSERT(bhi3_set_wrist_wear_wakeup_config((uint8_t *)&www, &cli_ref->bhy2));
+
+    return CLI_OK;
+}
+
+int8_t wwwgetcnfg_help(void *ref)
+{
+    PRINT("  wwwgetcnfg \r\n");
+    PRINT("    \t -Get the Wrist Wear Wakeup Configuration\r\n");
+
+    return CLI_OK;
+}
+
+int8_t wwwgetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    bhi3_wrist_wear_wakeup_config_param_t www = { 0 };
+
+    BHY2_ASSERT(bhi3_get_wrist_wear_wakeup_config((uint8_t *)&www, &cli_ref->bhy2));
+
+    PRINT("min_angle_focus : %d\r\n", www.min_angle_focus);
+    PRINT("min_angle_nonfocus : %d\r\n", www.min_angle_nonfocus);
+    PRINT("angle_landscape_right : %d\r\n", www.angle_landscape_right);
+    PRINT("angle_landscape_left : %d\r\n", www.angle_landscape_left);
+    PRINT("angle_portrait_down : %d\r\n", www.angle_portrait_down);
+    PRINT("angle_portrait_up : %d\r\n", www.angle_portrait_up);
+    PRINT("min_dur_moved : %d\r\n", www.min_dur_moved);
+    PRINT("min_dur_quite : %d\r\n", www.min_dur_quite);
+
+    return CLI_OK;
+}
+
+int8_t amsetcnfg_help(void *ref)
+{
+    PRINT("  amsetcnfg <dur> <axis> <thrs> \r\n");
+    PRINT("    \t -Set the Any Motion Configuration (in Hex)\r\n");
+    PRINT("    \t <dur> : duration (u16), range 0 to 163s in steps of 20ms\r\n");
+    PRINT("    \t <axis> : axis select (u8), range 0 to 7, <az>:<ay>:<ax>\r\n");
+    PRINT("    \t <thrs> : threshold (u16), range 0 to 1g in steps of 0.5mg\r\n");
+
+    return CLI_OK;
+}
+
+int8_t amsetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    uint8_t am_cfg[BHI3_PHY_ANY_MOTION_CTRL_LEN];
+
+    uint16_t duration = string_to_int((char *)argv[1]);
+    uint8_t axis = (uint8_t)string_to_int((char *)argv[2]);
+    uint16_t threshold = string_to_int((char *)argv[3]);
+
+    am_cfg[0] = (duration & 0x00FF);
+    am_cfg[1] = (axis << 5) | ((duration >> 8) & 0x1F);
+    am_cfg[2] = (threshold & 0x00FF);
+    am_cfg[3] = (threshold >> 8);
+
+    BHY2_ASSERT(bhi3_set_anymotion_config(am_cfg, &cli_ref->bhy2));
+
+    PRINT("Any Motion Parameter set successfully \r\n");
+
+    return CLI_OK;
+}
+
+int8_t amgetcnfg_help(void *ref)
+{
+    PRINT("  amgetcnfg \r\n");
+    PRINT("    \t -Get the Any Motion Configuration\r\n");
+
+    return CLI_OK;
+}
+
+int8_t amgetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    uint8_t am_cfg[BHY2_LE24MUL(BHI3_PHY_ANY_MOTION_CTRL_LEN)] = { 0 };
+    bhi3_any_no_motion_config_param_t anymotion_cfg = { 0 };
+
+    BHY2_ASSERT(bhi3_get_anymotion_config(am_cfg, &cli_ref->bhy2));
+
+    anymotion_cfg.duration = (uint16_t)(((am_cfg[1]) & 0x1F) | am_cfg[0]);
+    anymotion_cfg.axis = (uint8_t)((am_cfg[1]) >> 5);
+    anymotion_cfg.threshold = (uint16_t)(((am_cfg[3]) << 8) | am_cfg[2]);
+
+    PRINT("Duration : 0x%02x\r\n", anymotion_cfg.duration);
+    PRINT("Axis : 0x%02x\r\n", anymotion_cfg.axis);
+    PRINT("Threshold : 0x%02x\r\n", anymotion_cfg.threshold);
+
+    return CLI_OK;
+}
+
+int8_t nmsetcnfg_help(void *ref)
+{
+    PRINT("  nmsetcnfg <dur> <axis> <thrs> \r\n");
+    PRINT("    \t -Set the No Motion Configuration (in Hex)\r\n");
+    PRINT("    \t <dur> : duration (u16), range 0 to 163s in steps of 20ms\r\n");
+    PRINT("    \t <axis> : axis select (u8), range 0 to 7, <az>:<ay>:<ax>\r\n");
+    PRINT("    \t <thrs> : threshold (u16), range 0 to 1g in steps of 0.5mg\r\n");
+
+    return CLI_OK;
+}
+
+int8_t nmsetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    uint8_t nm_cfg[BHI3_PHY_NO_MOTION_CTRL_LEN];
+
+    uint16_t duration = string_to_int((char *)argv[1]);
+    uint8_t axis = (uint8_t)string_to_int((char *)argv[2]);
+    uint16_t threshold = string_to_int((char *)argv[3]);
+
+    nm_cfg[0] = (duration & 0x00FF);
+    nm_cfg[1] = (axis << 5) | ((duration >> 8) & 0x1F);
+    nm_cfg[2] = (threshold & 0x00FF);
+    nm_cfg[3] = (threshold >> 8);
+
+    BHY2_ASSERT(bhi3_set_nomotion_config(nm_cfg, &cli_ref->bhy2));
+
+    PRINT("No Motion Parameter set successfully \r\n");
+
+    return CLI_OK;
+}
+
+int8_t nmgetcnfg_help(void *ref)
+{
+    PRINT("  nmgetcnfg \r\n");
+    PRINT("    \t -Get the No Motion Configuration\r\n");
+
+    return CLI_OK;
+}
+
+int8_t nmgetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    uint8_t nm_cfg[BHY2_LE24MUL(BHI3_PHY_NO_MOTION_CTRL_LEN)] = { 0 };
+    bhi3_any_no_motion_config_param_t nomotion_cfg = { 0 };
+
+    BHY2_ASSERT(bhi3_get_nomotion_config(nm_cfg, &cli_ref->bhy2));
+
+    nomotion_cfg.duration = (uint16_t)(((nm_cfg[1]) & 0x1F) | nm_cfg[0]);
+    nomotion_cfg.axis = (uint8_t)((nm_cfg[1]) >> 5);
+    nomotion_cfg.threshold = (uint16_t)(((nm_cfg[3]) << 8) | nm_cfg[2]);
+
+    PRINT("Duration : 0x%02x\r\n", nomotion_cfg.duration);
+    PRINT("Axis : 0x%02x\r\n", nomotion_cfg.axis);
+    PRINT("Threshold : 0x%02x\r\n", nomotion_cfg.threshold);
+
+    return CLI_OK;
+}
+
+int8_t wgdsetcnfg_help(void *ref)
+{
+    PRINT("  wgdsetcnfg <mfpy_th> <mfpz_th> <gx_pos> <gx_neg> <gy_neg> <gz_neg> <fpdc> <lmfc> <mdjp> <dp> \r\n");
+    PRINT("    \t -Set the Wrist Wear Wakeup Configuration (in Hex)\r\n");
+    PRINT("    \t <mfpy_th> : min_flick_peak_y_threshold (u16), range 0x3E8 to 0x9C4\r\n");
+    PRINT("    \t <mfpz_th> : min_flick_peak_z_threshold (u16), range 0x1F4 to 0x5DC\r\n");
+    PRINT("    \t <gx_pos> : gravity_bounds_x_pos (u16), range 0x0 to 0x800\r\n");
+    PRINT("    \t <gx_neg> : gravity_bounds_x_neg (u16), range 0x0 to 0xFC00\r\n");
+    PRINT("    \t <gy_neg> : gravity_bounds_y_neg (u16), range 0x0 to 0xFC3F\r\n");
+    PRINT("    \t <gz_neg> : gravity_bounds_z_neg (u16), range 0x800 to 0xF912\r\n");
+    PRINT("    \t <fpdc> : flick_peak_decay_coeff (u16), range 0x0 to 0x8000\r\n");
+    PRINT("    \t <lmfc> : lp_mean_filter_coeff (u16), range 0x0 to 0x8000\r\n");
+    PRINT("    \t <mdjp> : max_duration_jiggle_peaks (u16), range 0xA to 0x19\r\n");
+    PRINT("    \t <dp> : device_position (u8), 0 or 1\r\n");
+
+    return CLI_OK;
+}
+
+int8_t wgdsetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    bhi3_wrist_gesture_detect_config_param_t wgd = { 0 };
+
+    wgd.min_flick_peak_y_threshold = string_to_int((char *)argv[1]);
+    wgd.min_flick_peak_z_threshold = string_to_int((char *)argv[2]);
+    wgd.gravity_bounds_x_pos = string_to_int((char *)argv[3]);
+    wgd.gravity_bounds_x_neg = string_to_int((char *)argv[4]);
+    wgd.gravity_bounds_y_neg = string_to_int((char *)argv[5]);
+    wgd.gravity_bounds_z_neg = string_to_int((char *)argv[6]);
+    wgd.flick_peak_decay_coeff = string_to_int((char *)argv[7]);
+    wgd.lp_mean_filter_coeff = string_to_int((char *)argv[8]);
+    wgd.max_duration_jiggle_peaks = string_to_int((char *)argv[9]);
+    wgd.device_position = (uint8_t)string_to_int((char *)argv[10]);
+
+    BHY2_ASSERT(bhi3_set_wrist_gesture_detect_config((uint8_t *)&wgd, &cli_ref->bhy2));
+
+    PRINT("Wrist Gesture Detector Parameter set successfully \r\n");
+
+    return CLI_OK;
+}
+
+int8_t wgdgetcnfg_help(void *ref)
+{
+    PRINT("  wgdgetcnfg \r\n");
+    PRINT("    \t -Get the Wrist Wear Wakeup Configuration\r\n");
+
+    return CLI_OK;
+}
+
+int8_t wgdgetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    bhi3_wrist_gesture_detect_config_param_t wgd = { 0 };
+
+    BHY2_ASSERT(bhi3_get_wrist_gesture_detect_config((uint8_t *)&wgd, &cli_ref->bhy2));
+
+    PRINT("min_flick_peak_y_threshold : 0x%04x\r\n", wgd.min_flick_peak_y_threshold);
+    PRINT("min_flick_peak_z_threshold : 0x%04x\r\n", wgd.min_flick_peak_z_threshold);
+    PRINT("gravity_bounds_x_pos : 0x%04x\r\n", wgd.gravity_bounds_x_pos);
+    PRINT("gravity_bounds_x_neg : 0x%04x\r\n", wgd.gravity_bounds_x_neg);
+    PRINT("gravity_bounds_y_neg : 0x%04x\r\n", wgd.gravity_bounds_y_neg);
+    PRINT("gravity_bounds_z_neg : 0x%04x\r\n", wgd.gravity_bounds_z_neg);
+    PRINT("flick_peak_decay_coeff : 0x%04x\r\n", wgd.flick_peak_decay_coeff);
+    PRINT("lp_mean_filter_coeff : 0x%04x\r\n", wgd.lp_mean_filter_coeff);
+    PRINT("max_duration_jiggle_peaks : 0x%04x\r\n", wgd.max_duration_jiggle_peaks);
+    PRINT("device_position : 0x%02x\r\n", wgd.device_position);
 
     return CLI_OK;
 }

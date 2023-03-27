@@ -31,8 +31,8 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *
 * @file       bhy2_pdr_defs.h
-* @date       2022-10-17
-* @version    v1.4.1
+* @date       2023-02-10
+* @version    v1.5.0
 *
 */
 
@@ -68,6 +68,8 @@ extern "C" {
 #define BHY2_PDR_DEV_POS_HEAD          UINT8_C(0x01)
 #define BHY2_PDR_DEV_POS_SHOE          UINT8_C(0x02)
 #define BHY2_PDR_DEV_POS_BACKPACK      UINT8_C(0x03)
+
+#define BHY2_PDR_FIFO_LEN              UINT8_C(16)
 
 struct bhy2_pdr_frame /* Description; Scaling and format; Range; Comment */
 {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -41,11 +41,15 @@
 #include <stdint.h>
 
 #include "cli.h"
+
 #include "bhy2.h"
+#include "bhi3.h"
+
 #include "bhy2_klio.h"
 #include "bhy2_pdr.h"
 #include "bhy2_swim.h"
 #include "bhy2_bsec.h"
+#include "bhi3_multi_tap.h"
 #include "parse.h"
 
 /* Start of CPP guard */
@@ -174,6 +178,10 @@ int8_t wrp_help(void *ref);
 
 int8_t wrp_callback(uint8_t argc, uint8_t *argv[], void *ref);
 
+int8_t physeninfo_help(void *ref);
+
+int8_t physeninfo_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
 int8_t ram_help(void *ref);
 
 int8_t ram_callback(uint8_t argc, uint8_t *argv[], void *ref);
@@ -286,6 +294,10 @@ int8_t dmode_help(void *ref);
 
 int8_t dmode_callback(uint8_t argc, uint8_t *argv[], void *ref);
 
+int8_t pm_help(void *ref);
+
+int8_t pm_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
 int8_t dactse_help(void *ref);
 
 int8_t dactse_callback(uint8_t argc, uint8_t *argv[], void *ref);
@@ -293,6 +305,118 @@ int8_t dactse_callback(uint8_t argc, uint8_t *argv[], void *ref);
 int8_t lsactse_help(void *ref);
 
 int8_t lsactse_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t mtapen_help(void *ref);
+
+int8_t mtapen_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t mtapinfo_help(void *ref);
+
+int8_t mtapinfo_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t mtapsetcnfg_help(void *ref);
+
+int8_t mtapsetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t mtapgetcnfg_help(void *ref);
+
+int8_t mtapgetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t accsetfoc_help(void *ref);
+
+int8_t accsetfoc_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t accgetfoc_help(void *ref);
+
+int8_t accgetfoc_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t accsetpwm_help(void *ref);
+
+int8_t accsetpwm_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t accgetpwm_help(void *ref);
+
+int8_t accgetpwm_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t gyrosetfoc_help(void *ref);
+
+int8_t gyrosetfoc_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t gyrogetfoc_help(void *ref);
+
+int8_t gyrogetfoc_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t gyrosetois_help(void *ref);
+
+int8_t gyrosetois_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t gyrogetois_help(void *ref);
+
+int8_t gyrogetois_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t gyrosetfs_help(void *ref);
+
+int8_t gyrosetfs_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t gyrogetfs_help(void *ref);
+
+int8_t gyrogetfs_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t gyrosetcrt_help(void *ref);
+
+int8_t gyrosetcrt_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t gyrogetcrt_help(void *ref);
+
+int8_t gyrogetcrt_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t gyrosetpwm_help(void *ref);
+
+int8_t gyrosetpwm_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t gyrogetpwm_help(void *ref);
+
+int8_t gyrogetpwm_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t gyrosettat_help(void *ref);
+
+int8_t gyrosettat_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t gyrogettat_help(void *ref);
+
+int8_t gyrogettat_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t wwwsetcnfg_help(void *ref);
+
+int8_t wwwsetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t wwwgetcnfg_help(void *ref);
+
+int8_t wwwgetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t amsetcnfg_help(void *ref);
+
+int8_t amsetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t amgetcnfg_help(void *ref);
+
+int8_t amgetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t nmsetcnfg_help(void *ref);
+
+int8_t nmsetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t nmgetcnfg_help(void *ref);
+
+int8_t nmgetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t wgdsetcnfg_help(void *ref);
+
+int8_t wgdsetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t wgdgetcnfg_help(void *ref);
+
+int8_t wgdgetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref);
 
 /* End of CPP guard */
 #ifdef __cplusplus

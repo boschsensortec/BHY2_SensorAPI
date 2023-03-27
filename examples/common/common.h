@@ -41,6 +41,9 @@
 #include <stdbool.h>
 
 #include "bhy2.h"
+#include "bhi3.h"
+#include "bhi3_multi_tap.h"
+
 #include "bhy2_klio.h"
 #include "bhy2_pdr.h"
 #include "bhy2_swim.h"

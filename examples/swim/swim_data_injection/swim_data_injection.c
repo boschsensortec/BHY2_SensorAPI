@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -30,8 +30,8 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * @file    data_injection.c
- * @brief   Data injection - Integration validation
+ * @file    swim_data_injection.c
+ * @brief   SWIM Data injection - Integration validation
  *
  */
 
@@ -267,7 +267,7 @@ int main(int argc, char **argv)
     {
         printf("Host interface not ready. Exiting\r\n");
 
-        close_interfaces(BHY2_SPI_INTERFACE);
+        close_interfaces(intf);
 
         return 0;
     }
@@ -408,7 +408,7 @@ int main(int argc, char **argv)
     fclose(log_ptr);
 
     /*! Close all the active communication */
-    close_interfaces(BHY2_SPI_INTERFACE);
+    close_interfaces(intf);
 
     return rslt;
 }

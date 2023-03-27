@@ -31,8 +31,8 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *
 * @file       bhy2.h
-* @date       2022-10-17
-* @version    v1.4.1
+* @date       2023-02-10
+* @version    v1.5.0
 *
 */
 
@@ -432,6 +432,17 @@ int8_t bhy2_perform_foc(uint8_t phys_sensor_id, struct bhy2_foc_resp *foc_resp, 
  */
 int8_t bhy2_set_orientation_matrix(uint8_t phys_sensor_id, struct bhy2_orient_matrix orient_matrix,
                                    struct bhy2_dev *dev);
+
+/**
+ * @brief Function to get the physical sensor information
+ * @param[in] phys_sensor_id : Sensor ID of the physical sensor
+ * @param[out] phy_sen_info : Reference to the data buffer to the store the physical sensor information
+ * @param[in] dev            : Device reference
+ * @return API error codes
+ */
+int8_t bhy2_get_phys_sensor_info(uint8_t phys_sensor_id,
+                                 struct bhy2_phys_sensor_info *phy_sen_info,
+                                 struct bhy2_dev *dev);
 
 /**
  * @brief Function to get the orientation matrix of a physical sensor
