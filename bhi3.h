@@ -39,6 +39,7 @@
 #ifndef __BHI3_H__
 #define __BHI3_H__
 
+/* Start of CPP guard */
 #ifdef __cplusplus
 extern "C" {
 #endif /*__cplusplus */
@@ -321,6 +322,7 @@ int8_t bhi3_set_wrist_gesture_detect_config(const uint8_t *wgd_cnfg, struct bhy2
  */
 int8_t bhi3_get_wrist_gesture_detect_config(uint8_t *wgd_cnfg, struct bhy2_dev *dev);
 
+/* End of CPP guard */
 #ifdef __cplusplus
 }
 #endif /*__cplusplus */

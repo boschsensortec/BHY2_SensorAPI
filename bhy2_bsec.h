@@ -39,15 +39,16 @@
 #ifndef _BHY2_BSEC_H_
 #define _BHY2_BSEC_H_
 
+/* Start of CPP guard */
+#ifdef __cplusplus
+extern "C" {
+#endif /*__cplusplus */
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdlib.h>
 
 #include "bhy2.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif /*__cplusplus */
 
 #define BHY2_SENSOR_ID_AIR_QUALITY  UINT8_C(115)
 
@@ -65,6 +66,7 @@ struct bhy2_bsec_air_quality
 
 void bhy2_bsec_parse_air_quality(const uint8_t *payload, struct bhy2_bsec_air_quality *data);
 
+/* End of CPP guard */
 #ifdef __cplusplus
 }
 #endif /*__cplusplus */

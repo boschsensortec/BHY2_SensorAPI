@@ -38,6 +38,11 @@
 #ifndef BHY2CLI_DINJECT_H_
 #define BHY2CLI_DINJECT_H_
 
+/* Start of CPP guard */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 
 #include "bhy2.h"
@@ -95,5 +100,10 @@ int8_t dinject_deinit(struct data_inject *dinject, struct bhy2_dev *bhy2);
 * @return API error codes
 */
 int8_t dinject_parse_file(FILE *fp, size_t hex_len, size_t event_size, uint8_t int_stream[]);
+
+/* End of CPP guard */
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* BHY2CLI_DINJECT_H_ */

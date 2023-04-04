@@ -39,15 +39,16 @@
 #ifndef _BHY2_MULTI_TAP_H_
 #define _BHY2_MULTI_TAP_H_
 
+/* Start of CPP guard */
+#ifdef __cplusplus
+extern "C" {
+#endif /*__cplusplus */
+
 #include <stdint.h>
 #include <stdlib.h>
 
 #include "bhi3.h"
 #include "bhi3_multi_tap_defs.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif /*__cplusplus */
 
 /*!
  * @brief Parsing the fifo data to MULTI_TAP output structure format
@@ -102,6 +103,7 @@ int8_t bhi3_multi_tap_detector_set_config(const void *buffer, struct bhy2_dev *d
  */
 int8_t bhi3_multi_tap_detector_get_config(const void *buffer, struct bhy2_dev *dev);
 
+/* End of CPP guard */
 #ifdef __cplusplus
 }
 #endif /*__cplusplus */

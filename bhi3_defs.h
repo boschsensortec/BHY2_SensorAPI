@@ -39,6 +39,7 @@
 #ifndef __BHI3_DEFS_H__
 #define __BHI3_DEFS_H__
 
+/* Start of CPP guard */
 #ifdef __cplusplus
 extern "C" {
 #endif /*__cplusplus */
@@ -180,6 +181,7 @@ static const char * const bhi3_phy_sensor_pwm_output[] = {
     [NORMAL] = "NORMAL", [LOW_POWER] = "LOW POWER"
 }; /*lint -e528 */
 
+/* End of CPP guard */
 #ifdef __cplusplus
 }
 #endif /*__cplusplus */

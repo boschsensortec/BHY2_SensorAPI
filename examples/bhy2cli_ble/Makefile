@@ -8,6 +8,8 @@ COINES_BACKEND ?= COINES_BRIDGE
 
 API_LOCATION ?= ../..
 
+FW_LOCATION ?= ../..
+
 COMMON_LOCATION ?= ..
 
 C_SRCS += \
@@ -20,20 +22,21 @@ bhy2cli_callbacks.c \
 common_callbacks.c \
 verbose.c \
 $(COMMON_LOCATION)/common/common.c \
-$(API_LOCATION)/source/bhy2.c \
-$(API_LOCATION)/source/bhy2_hif.c \
-$(API_LOCATION)/source/bhy2_parse.c \
-$(API_LOCATION)/source/bhy2_klio.c \
-$(API_LOCATION)/source/bhy2_pdr.c \
-$(API_LOCATION)/source/bhy2_swim.c \
-$(API_LOCATION)/source/bhy2_bsec.c \
-$(API_LOCATION)/source/bhi3.c \
-$(API_LOCATION)/source/bhi3_multi_tap.c
+$(API_LOCATION)/bhy2.c \
+$(API_LOCATION)/bhy2_hif.c \
+$(API_LOCATION)/bhy2_parse.c \
+$(API_LOCATION)/bhy2_klio.c \
+$(API_LOCATION)/bhy2_pdr.c \
+$(API_LOCATION)/bhy2_swim.c \
+$(API_LOCATION)/bhy2_bsec.c \
+$(API_LOCATION)/bhi3.c \
+$(API_LOCATION)/bhi3_multi_tap.c \
+$(API_LOCATION)/bhy2_head_tracker.c
 
 INCLUDEPATHS += . \
 $(COMMON_LOCATION)/common \
-$(API_LOCATION)/source \
-$(API_LOCATION)/firmware
+$(API_LOCATION) \
+$(FW_LOCATION)/firmware
 
 # By default, the sensor is connected over SPI. Define this to change to I2C
 ifeq ($(BHY2_INTF), I2C)

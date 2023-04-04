@@ -8,19 +8,21 @@ COINES_BACKEND ?= COINES_BRIDGE
 
 API_LOCATION ?= ../..
 
+FW_LOCATION ?= ../..
+
 COMMON_LOCATION ?= ..
 
 C_SRCS += \
 $(COMMON_LOCATION)/common/common.c \
-$(API_LOCATION)/source/bhy2.c \
-$(API_LOCATION)/source/bhy2_hif.c \
-$(API_LOCATION)/source/bhy2_parse.c \
-$(API_LOCATION)/source/bhy2_klio.c 
+$(API_LOCATION)/bhy2.c \
+$(API_LOCATION)/bhy2_hif.c \
+$(API_LOCATION)/bhy2_parse.c \
+$(API_LOCATION)/bhy2_klio.c 
 
 INCLUDEPATHS += . \
 $(COMMON_LOCATION)/common \
-$(API_LOCATION)/source \
-$(API_LOCATION)/firmware
+$(API_LOCATION) \
+$(FW_LOCATION)/firmware
 
 # By default, the sensor is connected over SPI. Define this to change to I2C
 ifeq ($(BHY2_INTF), I2C)

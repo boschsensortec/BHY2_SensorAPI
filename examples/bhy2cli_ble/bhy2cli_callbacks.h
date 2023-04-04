@@ -38,6 +38,11 @@
 #ifndef _BHY2CLI_CALLBACKS_H_
 #define _BHY2CLI_CALLBACKS_H_
 
+/* Start of CPP guard */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 
 #include "cli.h"
@@ -51,11 +56,6 @@
 #include "bhy2_bsec.h"
 #include "bhi3_multi_tap.h"
 #include "parse.h"
-
-/* Start of CPP guard */
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 struct bhy2_cli_ref
 {

@@ -39,6 +39,7 @@
 #ifndef __BHY2_DEFS_H__
 #define __BHY2_DEFS_H__
 
+/* Start of CPP guard */
 #ifdef __cplusplus
 extern "C" {
 #endif /*__cplusplus */
@@ -800,6 +801,7 @@ enum bhy2_data_inj_mode {
 
 #define BHY2_BYTE_TO_NIBBLE(X)  (((uint8_t)(X)[0] & 0x0F) | (((uint8_t)(X)[1] << 4) & 0xF0))
 
+/* End of CPP guard */
 #ifdef __cplusplus
 }
 #endif /*__cplusplus */

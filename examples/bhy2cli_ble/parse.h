@@ -38,6 +38,11 @@
 #ifndef BHY2CLI_PARSE_H_
 #define BHY2CLI_PARSE_H_
 
+/* Start of CPP guard */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 
 #include "bhy2.h"
@@ -103,5 +108,10 @@ void parse_gps(const struct bhy2_fifo_parse_data_info *callback_info, void *call
 void parse_pdr(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
 
 void parse_debug_message(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
+
+/* End of CPP guard */
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* BHY2CLI_PARSE_H_ */

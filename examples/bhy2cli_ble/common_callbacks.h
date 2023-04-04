@@ -38,14 +38,14 @@
 #ifndef _COMMON_CALLBACKS_H_
 #define _COMMON_CALLBACKS_H_
 
-#include <stdint.h>
-
-#include "cli.h"
-
 /* Start of CPP guard */
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include <stdint.h>
+
+#include "cli.h"
 
 #define CLI_STREAM_BUF_MAX  240
 #define WRITE_TIMEOUT_MS    10000

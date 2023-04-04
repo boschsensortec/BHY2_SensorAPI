@@ -39,6 +39,11 @@
 #ifndef _BHI3_MULTI_TAP_DEFS_H_
 #define _BHI3_MULTI_TAP_DEFS_H_
 
+/* Start of CPP guard */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <string.h>
 
@@ -175,5 +180,10 @@ static const char * const bhi3_multi_tap_string_out[] = {
     [DOUBLE_SINGLE_TAP] = "DOUBLE_SINGLE_TAP", [TRIPLE_TAP] = "TRIPLE_TAP", [TRIPLE_SINGLE_TAP] = "TRIPLE_SINGLE_TAP",
     [TRIPLE_DOUBLE_TAP] = "TRIPLE_DOUBLE_TAP", [TRIPLE_DOUBLE_SINGLE_TAP] = "TRIPLE_DOUBLE_SINGLE_TAP"
 }; /*lint -e528 */
+
+/* End of CPP guard */
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _BHI3_MULTI_TAP_DEFS_H_ */

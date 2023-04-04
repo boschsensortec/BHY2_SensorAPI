@@ -9,19 +9,21 @@ COINES_BACKEND ?= COINES_BRIDGE
 
 API_LOCATION ?= ../../..
 
+FW_LOCATION ?= ../../..
+
 COMMON_LOCATION ?= ../..
 
 C_SRCS += \
 $(COMMON_LOCATION)/common/common.c \
-$(API_LOCATION)/source/bhy2.c \
-$(API_LOCATION)/source/bhy2_hif.c \
-$(API_LOCATION)/source/bhy2_parse.c \
-$(API_LOCATION)/source/bhy2_swim.c 
+$(API_LOCATION)/bhy2.c \
+$(API_LOCATION)/bhy2_hif.c \
+$(API_LOCATION)/bhy2_parse.c \
+$(API_LOCATION)/bhy2_swim.c 
 
 INCLUDEPATHS += . \
 $(COMMON_LOCATION)/common \
-$(API_LOCATION)/source \
-$(API_LOCATION)/firmware
+$(API_LOCATION) \
+$(FW_LOCATION)/firmware
 
 #SHUTTLE_BOARD ?= BHI260
 

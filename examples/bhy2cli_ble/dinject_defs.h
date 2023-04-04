@@ -38,6 +38,11 @@
 #ifndef BHY2CLI_DINJECT_DEFS_H_
 #define BHY2CLI_DINJECT_DEFS_H_
 
+/* Start of CPP guard */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*! Hex String Length */
 /*! Corresponds to number of characters in xBit Hex data*/
 #define _8BIT_HEX_LEN                     2
@@ -68,5 +73,10 @@
 #define FULL_TIMESTAMP_EVENT_SIZE         INT8_C(6)
 #define META_EVENT_SIZE                   INT8_C(4)
 #define DEBUG_EVENT_SIZE                  INT8_C(18)
+
+/* End of CPP guard */
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* BHY2CLI_DINJECT_DEFS_H_ */

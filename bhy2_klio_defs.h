@@ -39,6 +39,11 @@
 #ifndef __BHY2_KLIO_DEFS_H__
 #define __BHY2_KLIO_DEFS_H__
 
+/* Start of CPP guard */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 
 #define BHY2_SENSOR_ID_KLIO      UINT8_C(112)
@@ -335,5 +340,10 @@ typedef enum
      */
     KLIO_DRIVER_ERROR_OPERATION_PENDING = 8
 } bhy2_klio_driver_error_state_t;
+
+/* End of CPP guard */
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __BHY2_KLIO_DEFS_H__ */

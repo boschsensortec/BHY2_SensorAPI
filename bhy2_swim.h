@@ -39,15 +39,16 @@
 #ifndef _BHY2_SWIM_H_
 #define _BHY2_SWIM_H_
 
+/* Start of CPP guard */
+#ifdef __cplusplus
+extern "C" {
+#endif /*__cplusplus */
+
 #include <stdint.h>
 #include <stdlib.h>
 
 #include "bhy2.h"
 #include "bhy2_swim_defs.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif /*__cplusplus */
 
 /*!
  * @brief Parsing the fifo data to SWIM output structure format
@@ -92,6 +93,7 @@ int8_t bhy2_swim_get_version(bhy2_swim_version_t *buffer, struct bhy2_dev *dev);
  */
 int8_t bhy2_swim_set_config(const void *buffer, struct bhy2_dev *dev);
 
+/* End of CPP guard */
 #ifdef __cplusplus
 }
 #endif /*__cplusplus */

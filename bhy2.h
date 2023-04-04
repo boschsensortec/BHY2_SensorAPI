@@ -39,6 +39,7 @@
 #ifndef __BHY2_H__
 #define __BHY2_H__
 
+/* Start of CPP guard */
 #ifdef __cplusplus
 extern "C" {
 #endif /*__cplusplus */
@@ -655,6 +656,7 @@ int8_t bhy2_read_status(uint16_t *status_code,
                         uint32_t *actual_len,
                         struct bhy2_dev *dev);
 
+/* End of CPP guard */
 #ifdef __cplusplus
 }
 #endif /*__cplusplus */

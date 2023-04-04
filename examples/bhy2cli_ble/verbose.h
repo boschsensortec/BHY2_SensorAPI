@@ -37,12 +37,12 @@
 #ifndef _VERBOSE_H_
 #define _VERBOSE_H_
 
-#include "coines.h"
-
 /* Start of CPP guard */
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include "coines.h"
 
 #define VERBOSE_BUFFER_SIZE  256
 
@@ -65,7 +65,7 @@ int8_t verbose_callback(uint8_t argc, uint8_t *argv[], void *ref);
 
 void verbose_write(uint8_t *buffer, uint16_t length);
 
-/* Start of CPP guard */
+/* End of CPP guard */
 #ifdef __cplusplus
 }
 #endif

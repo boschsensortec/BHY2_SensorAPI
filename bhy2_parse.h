@@ -38,6 +38,7 @@
 #ifndef __BHY2_PARSE_H__
 #define __BHY2_PARSE_H__
 
+/* Start of CPP guard */
 #ifdef __cplusplus
 extern "C" {
 #endif /*__cplusplus */
@@ -93,6 +94,7 @@ void bhy2_parse_orientation(const uint8_t *data, struct bhy2_data_orientation *o
  */
 void bhy2_parse_xyz(const uint8_t *data, struct bhy2_data_xyz *vector);
 
+/* End of CPP guard */
 #ifdef __cplusplus
 }
 #endif /*__cplusplus */

@@ -38,14 +38,14 @@
 #ifndef _LOGBIN_H_
 #define _LOGBIN_H_
 
-#include <stdint.h>
-#include <stddef.h>
-#include <stdio.h>
-
 /* Start of CPP guard */
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
 
 #define LOGBIN_VERSION          "1.0"
 

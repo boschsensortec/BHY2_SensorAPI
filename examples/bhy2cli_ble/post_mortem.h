@@ -38,16 +38,16 @@
 #ifndef _POST_MORTEM_H_
 #define _POST_MORTEM_H_
 
+/* Start of CPP guard */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <bhy2.h>
-
-/* Start of CPP guard */
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #define STACK_SIZE            4096
 

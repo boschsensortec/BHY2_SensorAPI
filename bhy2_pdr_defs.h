@@ -39,11 +39,12 @@
 #ifndef __BHY2_PDR_DEFS_H__
 #define __BHY2_PDR_DEFS_H__
 
-#include <stdint.h>
-
+/* Start of CPP guard */
 #ifdef __cplusplus
 extern "C" {
 #endif /*__cplusplus */
+
+#include <stdint.h>
 
 #define BHY2_SENSOR_ID_PDR             UINT8_C(113)
 #define BHY2_SENSOR_ID_PDR_LOG         UINT8_C(119)
@@ -99,6 +100,7 @@ typedef struct
     float gyro[3];
 } BHY2_PACKED bhy2_pdr_log_frame_t;
 
+/* End of CPP guard */
 #ifdef __cplusplus
 }
 #endif /*__cplusplus */
