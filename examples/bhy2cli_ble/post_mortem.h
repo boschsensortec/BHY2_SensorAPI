@@ -38,10 +38,10 @@
 #ifndef _POST_MORTEM_H_
 #define _POST_MORTEM_H_
 
-/* Start of CPP guard */
+/* Start of CPP Guard */
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif /*__cplusplus */
 
 #include <stdint.h>
 #include <stddef.h>
@@ -133,9 +133,9 @@ int8_t print_post_mortem_data(struct bhy2_post_mortem *pminfo);
 
 #endif
 
-/* End of CPP guard */
+/* End of CPP Guard */
 #ifdef __cplusplus
 }
-#endif
+#endif /*__cplusplus */
 
 #endif /* _POST_MORTEM_H_ */

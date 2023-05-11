@@ -37,10 +37,10 @@
 #ifndef _VERBOSE_H_
 #define _VERBOSE_H_
 
-/* Start of CPP guard */
+/* Start of CPP Guard */
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif /*__cplusplus */
 
 #include "coines.h"
 
@@ -63,11 +63,17 @@ int8_t verbose_callback(uint8_t argc, uint8_t *argv[], void *ref);
 #define ERROR(format, ...)    verbose_error("[E]"format,##__VA_ARGS__)
 #define PRINT_E(format, ...)  verbose_error(format,##__VA_ARGS__)
 
+#define DATA(format, ...)     verbose("[D]"format,##__VA_ARGS__)
+#define PRINT_D(format, ...)  verbose(format,##__VA_ARGS__)
+
+#define HEX(format, ...)      verbose("[H]"format,##__VA_ARGS__)
+#define PRINT_H(format, ...)  verbose(format,##__VA_ARGS__)
+
 void verbose_write(uint8_t *buffer, uint16_t length);
 
-/* End of CPP guard */
+/* End of CPP Guard */
 #ifdef __cplusplus
 }
-#endif
+#endif /*__cplusplus */
 
 #endif /* _VERBOSE_H_ */

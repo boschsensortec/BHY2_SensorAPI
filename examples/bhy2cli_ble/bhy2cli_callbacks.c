@@ -37,7 +37,7 @@
 
 #define BHY2CLI_VER_MAJOR       "0"
 #define BHY2CLI_VER_MINOR       "4"
-#define BHY2CLI_VER_BUGFIX      "8"
+#define BHY2CLI_VER_BUGFIX      "9"
 
 #ifdef __STDC_ALLOC_LIB__
 #define __STDC_WANT_LIB_EXT2__  1
@@ -69,9 +69,6 @@
 #define BHY2_ASSERT(x)             assert_rslt = x; if (assert_rslt) check_bhy2_api(__LINE__, __FUNCTION__, assert_rslt)
 
 #define BHY2CLI_MAX_STRING_LENGTH  UINT16_C(32)
-
-#define DATA(format, ...)          verbose("[D]"format,##__VA_ARGS__)
-#define PRINT_D(format, ...)       verbose(format,##__VA_ARGS__)
 
 /* Contains all parameters of the of custom virtual sensors
  * required for parsing */
@@ -111,14 +108,14 @@ struct data_inject dinject;
 /*!
  * @brief To convert string input to int
  */
-uint16_t string_to_int(const char *str)
+uint32_t string_to_int(const char *str)
 {
-    char int_str[16] = { 0 };
+    char int_str[32] = { 0 };
 
     strncpy(int_str, str, strlen(str));
     int_str[strlen(str)] = '\0';
 
-    return (uint16_t)strtol(int_str, NULL, 0);
+    return (uint32_t)strtol(int_str, NULL, 0);
 }
 
 static cli_callback_table_t bhy2_cli_callbacks[] = {
@@ -132,6 +129,8 @@ static cli_callback_table_t bhy2_cli_callbacks[] = {
     { 'a', "addse", 1, addse_callback, addse_help }, /* Add a custom sensor */
     { 'g', "boot", 1, boot_callback, boot_help }, /* Boot from RAM or Flash */
     { 'c', "actse", 1, actse_callback, actse_help }, /* Activate/De-activate a sensor */
+    { 0, "schema", 0, schema_callback, schema_help }, /* Get schema information of the loaded sensors */
+    { 0, "hexse", 1, hexse_callback, hexse_help }, /* Stream sensor data in hex */
     { 0, "dactse", 0, dactse_callback, dactse_help }, /* Deactivate all the active sensors */
     { 0, "lsactse", 0, lsactse_callback, lsactse_help }, /* List all the active sensors */
     { 0, "dmode", 1, dmode_callback, dmode_help }, /* Switch to Data Injection mode */
@@ -163,15 +162,6 @@ static cli_callback_table_t bhy2_cli_callbacks[] = {
     { 0, "ksetparam", 2, ksetparam_callback, ksetparam_help }, /* Set Klio parameters */
     { 0, "ksimscore", 2, ksimscore_callback, ksimscore_help }, /* Get Klio Similarity score */
     { 0, "kmsimscore", 2, kmsimscore_callback, kmsimscore_help }, /* Get Multiple Klio Similarity score */
-    { 0, "pfullreset", 0, pfullreset_callback, pfullreset_help }, /* Trigger a PDR reset */
-    { 0, "ptrackreset", 0, ptrackreset_callback, ptrackreset_help }, /* Trigger a track reset for the PDR */
-    { 0, "prefheaddel", 1, prefheaddel_callback, prefheaddel_help }, /* Set the PDR's reference heading delta */
-    { 0, "pstepinfo", 2, pstepinfo_callback, pstepinfo_help }, /* Set the PDR's Step length */
-    { 0, "psethand", 1, psethand_callback, psethand_help }, /* Set the hand for the PDR */
-    { 0, "pdrver", 0, pdrver_callback, pdrver_help }, /* Get the PDR driver version*/
-    { 0, "palver", 0, palver_callback, palver_help }, /* Get the PDR algo version */
-    { 0, "pvariant", 0, pvariant_callback, pvariant_help }, /* Get the PDR variant */
-    { 0, "pdevpos", 0, pdevpos_callback, pdevpos_help }, /* Get the PDR device position */
     { 0, "swim", 3, swim_callback, swim_help }, /* Configure the Swim recognition */
     { 0, "swimver", 0, swimver_callback, swimver_help }, /* Get the Swim Version */
     { 0, "swimgetfreq", 0, swimgetfreq_callback, swimgetfreq_help }, /* Get the Swim frequency */
@@ -206,6 +196,27 @@ static cli_callback_table_t bhy2_cli_callbacks[] = {
     { 0, "nmgetcnfg", 0, nmgetcnfg_callback, nmgetcnfg_help }, /* Get the No Motion Configuration */
     { 0, "wgdsetcnfg", 10, wgdsetcnfg_callback, wgdsetcnfg_help }, /* Set the Wrist Gesture Detection Configuration */
     { 0, "wgdgetcnfg", 0, wgdgetcnfg_callback, wgdgetcnfg_help }, /* Get the Wrist Gesture Detection Configuration */
+    { 0, "hmctrig", 0, hmctrig_callback, hmctrig_help }, /* Trigger Head Misalignment Calibration */
+    { 0, "hmcsetcnfg", 4, hmcsetcnfg_callback, hmcsetcnfg_help }, /* Set Head Misalignment Configuration */
+    { 0, "hmcgetcnfg", 0, hmcgetcnfg_callback, hmcgetcnfg_help }, /* Get Head Misalignment Configuration */
+    { 0, "hmcsetdefcnfg", 0, hmcsetdefcnfg_callback, hmcsetdefcnfg_help }, /* Set Default Head Misalignment
+                                                                            * Configuration */
+    { 0, "hmcver", 0, hmcver_callback, hmcver_help }, /* Get Head Misalignment Calibrator Version */
+    { 0, "hmcsetcalcorrq", 4, hmcsetcalcorrq_callback, hmcsetcalcorrq_help }, /* Set Head Misalignment Quaternion
+                                                                               * Calibration Correction */
+    { 0, "hmcgetcalcorrq", 0, hmcgetcalcorrq_callback, hmcgetcalcorrq_help }, /* Get Head Misalignment Quaternion
+                                                                               * Calibration Correction */
+    { 0, "hosetheadcorrq", 1, hosetheadcorrq_callback, hosetheadcorrq_help }, /* Get Head Orientation
+                                                                                        * Quaternion Initial Head
+                                                                                        * Correction */
+    { 0, "hogetheadcorrq", 0, hogetheadcorrq_callback, hogetheadcorrq_help }, /* Get Head Orientation
+                                                                                        * Quaternion Initial Head
+                                                                                        * Correction */
+    { 0, "hover", 0, hover_callback, hover_help }, /* Get Head Orientation Version */
+    { 0, "hosetheadcorre", 1, hosetheadcorre_callback, hosetheadcorre_help }, /* Get Head Orientation Euler
+                                                                                     * Initial Head Correction */
+    { 0, "hogetheadcorre", 0, hogetheadcorre_callback, hogetheadcorre_help }, /* Get Head Orientation Euler Initial Head
+                                                                               * Correction */
 #ifndef PC
     { 0, "echo", 1, echo_callback, echo_help }, /* Toggle the echo setting */
     { 0, "heart", 1, heartbeat_callback, heartbeat_help }, /* Toggle the heartbeat message setting */
@@ -251,15 +262,18 @@ static void klio_similarity_score_multiple(const char *arg1, const char *arg2, s
 static void klio_pattern_state_operation(const uint8_t enable, const char *arg1, struct bhy2_dev *bhy2);
 void parse_klio(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
 void parse_klio_log(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
-void parse_pdr(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
-void parse_pdr_log(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
 void parse_swim(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
 void parse_acc_gyro(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
 void parse_multitap(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
 void parse_wrist_gesture_detect(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
 void parse_air_quality(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
+void parse_hmc(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
+void parse_oc(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
+void parse_ec(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
 static void log_data(uint8_t sid, uint64_t tns, uint8_t event_size, uint8_t *event_payload, struct logbin_dev *logdev);
 static void write_meta_info(struct logbin_dev *log, struct bhy2_dev *bhy2);
+static void stream_hex_data(uint8_t sid, uint32_t ts, uint32_t tns, uint8_t event_size, uint8_t *event_payload);
+static void schema_info(struct bhy2_dev *bhy2);
 
 cli_callback_table_t *bhy2_get_cli_callbacks(void)
 {
@@ -431,6 +445,8 @@ bhy2_fifo_parse_callback_t bhy2_get_callback(uint8_t sensor_id)
             break;
         case BHY2_SENSOR_ID_TEMP:
         case BHY2_SENSOR_ID_TEMP_WU:
+            callback = parse_s16_as_float;
+            break;
         case BHY2_SENSOR_ID_BARO:
         case BHY2_SENSOR_ID_BARO_WU:
             callback = parse_u24_as_float;
@@ -440,12 +456,6 @@ bhy2_fifo_parse_callback_t bhy2_get_callback(uint8_t sensor_id)
             break;
         case BHY2_SENSOR_ID_KLIO_LOG:
             callback = parse_klio_log;
-            break;
-        case BHY2_SENSOR_ID_PDR:
-            callback = parse_pdr;
-            break;
-        case BHY2_SENSOR_ID_PDR_LOG:
-            callback = parse_pdr_log;
             break;
         case BHY2_SENSOR_ID_SWIM:
             callback = parse_swim;
@@ -504,6 +514,17 @@ bhy2_fifo_parse_callback_t bhy2_get_callback(uint8_t sensor_id)
             break;
         case BHY2_SENSOR_ID_AIR_QUALITY:
             callback = parse_air_quality;
+            break;
+        case BHY2_SENSOR_ID_HEAD_ORI_MIS_ALG:
+            callback = parse_hmc;
+            break;
+        case BHY2_SENSOR_ID_IMU_HEAD_ORI_Q:
+        case BHY2_SENSOR_ID_NDOF_HEAD_ORI_Q:
+            callback = parse_oc;
+            break;
+        case BHY2_SENSOR_ID_IMU_HEAD_ORI_E:
+        case BHY2_SENSOR_ID_NDOF_HEAD_ORI_E:
+            callback = parse_ec;
             break;
         default:
             callback = parse_generic;
@@ -603,7 +624,7 @@ int8_t kdispatt_help(void *ref)
 int8_t kdisapatt_help(void *ref)
 {
     PRINT("  kdisapatt <patterns>\r\n");
-    PRINT("        = Disable pattern adaption for given pattern ids\r\n");
+    PRINT("        = Disable pattern adaptation for given pattern ids\r\n");
     PRINT("         <patterns> pattern indices to disable, specified as 0,1,4 etc\r\n");
 
     return CLI_OK;
@@ -622,7 +643,7 @@ int8_t kautldpatt_help(void *ref)
 {
     PRINT("  kautldpatt <enable> <index>\r\n");
     PRINT("        = Automatically use learnt patterns for recognition\r\n");
-    PRINT("         <enable> enable or disable (0/1)\r\n");
+    PRINT("         <enable> enable or disable (1/0)\r\n");
     PRINT("         <index> pattern index to start loading into (normally 0)\r\n");
 
     return CLI_OK;
@@ -656,7 +677,7 @@ int8_t kldpatt_callback(uint8_t argc, uint8_t *argv[], void *ref)
     INFO("Executing %s %s\r\n", argv[0], argv[1]);
     klio_enable(&cli_ref->bhy2);
     klio_load_pattern((char *)argv[1], (char *)argv[2], &cli_ref->bhy2);
-    PRINT("\r\n\r\n");
+    PRINT("Loaded pattern %s for recognition\r\n", argv[1]);
 
     return CLI_OK;
 }
@@ -668,7 +689,7 @@ int8_t kenpatt_callback(uint8_t argc, uint8_t *argv[], void *ref)
     INFO("Executing %s %s\r\n", argv[0], argv[1]);
     klio_enable(&cli_ref->bhy2);
     klio_pattern_state_operation(KLIO_PATTERN_STATE_ENABLE, (char *)argv[1], &cli_ref->bhy2);
-    PRINT("\r\n\r\n");
+    PRINT("Enabled pattern %s for recognition\r\n", argv[1]);
 
     return CLI_OK;
 }
@@ -680,7 +701,7 @@ int8_t kdispatt_callback(uint8_t argc, uint8_t *argv[], void *ref)
     INFO("Executing %s %s\r\n", argv[0], argv[1]);
     klio_enable(&cli_ref->bhy2);
     klio_pattern_state_operation(KLIO_PATTERN_STATE_DISABLE, (char *)argv[1], &cli_ref->bhy2);
-    PRINT("\r\n\r\n");
+    PRINT("Disabled pattern %s from recognition\r\n", argv[1]);
 
     return CLI_OK;
 }
@@ -692,7 +713,7 @@ int8_t kdisapatt_callback(uint8_t argc, uint8_t *argv[], void *ref)
     INFO("Executing %s %s\r\n", argv[0], argv[1]);
     klio_enable(&cli_ref->bhy2);
     klio_pattern_state_operation(KLIO_PATTERN_STATE_AP_DISABLE, (char *)argv[1], &cli_ref->bhy2);
-    PRINT("\r\n\r\n");
+    PRINT("Disable adaptation for pattern %s\r\n", argv[1]);
 
     return CLI_OK;
 }
@@ -704,7 +725,7 @@ int8_t kswpatt_callback(uint8_t argc, uint8_t *argv[], void *ref)
     INFO("Executing %s %s\r\n", argv[0], argv[1]);
     klio_enable(&cli_ref->bhy2);
     klio_pattern_state_operation(KLIO_PATTERN_STATE_SWITCH_HAND, (char *)argv[1], &cli_ref->bhy2);
-    PRINT("\r\n\r\n");
+    PRINT("Switched pattern to opposite hand for pattern %s\r\n", argv[1]);
 
     return CLI_OK;
 }
@@ -717,7 +738,9 @@ int8_t kautldpatt_callback(uint8_t argc, uint8_t *argv[], void *ref)
     klio_enable(&cli_ref->bhy2);
     klio_vars.auto_load_pattern = atoi((char *)argv[1]);
     klio_vars.auto_load_pattern_write_index = atoi((char *)argv[2]);
-    INFO("Klio auto load pattern set to %s, index is %s\r\n", argv[1], argv[2]);
+    PRINT("Klio auto load pattern %s, starting from index %s\r\n",
+          (klio_vars.auto_load_pattern == 0) ? "Disabled" : "Enabled",
+          argv[2]);
     PRINT("\r\n\r\n");
 
     return CLI_OK;
@@ -742,7 +765,7 @@ int8_t ksetparam_callback(uint8_t argc, uint8_t *argv[], void *ref)
     INFO("Executing %s %s %s\r\n", argv[0], argv[1], argv[2]);
     klio_enable(&cli_ref->bhy2);
     klio_set_parameter((char *)argv[1], (char *)argv[2], &cli_ref->bhy2);
-    PRINT("\r\n\r\n");
+    PRINT("Set value %s for parameter id %s\r\n", argv[2], argv[1]);
 
     return CLI_OK;
 }
@@ -1232,6 +1255,49 @@ int8_t actse_callback(uint8_t argc, uint8_t *argv[], void *ref)
     return CLI_OK;
 }
 
+int8_t schema_help(void *ref)
+{
+    PRINT("  schema\t= Show schema information: \r\n");
+    PRINT("    \t  Sensor ID, Sensor Name, Event Size, Parsing Format, Axis Names, Scaling Factor\r\n");
+
+    return CLI_OK;
+}
+
+int8_t schema_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+
+    INFO("Executing %s %s\r\n", argv[0], argv[1]);
+    schema_info(&cli_ref->bhy2);
+    PRINT("\r\n\r\n");
+
+    return CLI_OK;
+}
+
+int8_t hexse_help(void *ref)
+{
+    PRINT("  hexse <sensor id>:<frequency>[:<latency>]\r\n");
+    PRINT("    \t= Stream sensor <sensor id> at specified sample rate <frequency>, in hex format\r\n");
+    PRINT("    \t -latency <latency>, duration time <time>, sample counts <count>\r\n");
+    PRINT("    \t -At least <frequency> is a must input parameter\r\n");
+    PRINT("    \t -<latency> is optional\r\n");
+    PRINT("    \t -One or more sensors can be active by passing multiple logse options\r\n");
+    PRINT("    \t -id: sensor id\r\n");
+    PRINT("    \t -frequency(Hz): sensor ODR\r\n");
+    PRINT("    \t -latency(ms): sensor data outputs with a latency\r\n");
+
+    return CLI_OK;
+}
+
+int8_t hexse_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    INFO("Executing %s %s\r\n", argv[0], argv[1]);
+    activate_sensor((char *)argv[1], PARSE_FLAG_HEXSTREAM, (struct bhy2_cli_ref *)ref);
+    PRINT("\r\n\r\n");
+
+    return CLI_OK;
+}
+
 int8_t logse_help(void *ref)
 {
     PRINT("  logse <sensor id>:<frequency>[:<latency>]\r\n");
@@ -1369,255 +1435,6 @@ int8_t slabel_callback(uint8_t argc, uint8_t *argv[], void *ref)
     {
         ERROR("No open log file to set labels\r\n");
     }
-
-    return CLI_OK;
-}
-
-int8_t pfullreset_help(void *ref)
-{
-    PRINT("  pfullreset\r\n");
-    PRINT("    \t= Triggers a full reset of the PDR algorithm\r\n");
-
-    return CLI_OK;
-}
-
-int8_t pfullreset_callback(uint8_t argc, uint8_t *argv[], void *ref)
-{
-    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
-
-    INFO("Executing %s\r\n", argv[0]);
-
-    BHY2_ASSERT(bhy2_pdr_reset_full(&cli_ref->bhy2));
-
-    PRINT("Full reset complete\r\n\r\n\r\n");
-
-    return CLI_OK;
-}
-
-int8_t ptrackreset_help(void *ref)
-{
-    PRINT("  ptrackreset\r\n");
-    PRINT("    \t= Triggers a reset of the PDR track\r\n");
-
-    return CLI_OK;
-}
-
-int8_t ptrackreset_callback(uint8_t argc, uint8_t *argv[], void *ref)
-{
-    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
-
-    INFO("Executing %s\r\n", argv[0]);
-
-    BHY2_ASSERT(bhy2_pdr_reset_position(&cli_ref->bhy2));
-
-    PRINT("Track reset complete\r\n\r\n\r\n");
-
-    return CLI_OK;
-}
-
-int8_t prefheaddel_help(void *ref)
-{
-    PRINT("  prefheaddel <heading>\r\n");
-    PRINT("    \t= Set the reference heading delta.\r\n");
-    PRINT("    \t <heading> values from 0.0 to 359.9 degrees\r\n");
-
-    return CLI_OK;
-}
-
-int8_t prefheaddel_callback(uint8_t argc, uint8_t *argv[], void *ref)
-{
-    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
-    float heading;
-
-    INFO("Executing %s %s\r\n", argv[0], argv[1]);
-
-    heading = (float)atof((char *)argv[1]);
-
-    INFO("HD = %f\r\n", heading);
-
-    BHY2_ASSERT(bhy2_pdr_set_ref_heading_del(heading, &cli_ref->bhy2));
-
-    PRINT("Setting reference heading delta\r\n\r\n");
-
-    return CLI_OK;
-}
-
-int8_t pstepinfo_help(void *ref)
-{
-    PRINT("  pstepinfo <step length> <step length accuracy>\r\n");
-    PRINT("    \t= Set the step length.\r\n");
-    PRINT("    \t <step length> values from 0.00 to 5.00 meters\r\n");
-    PRINT("    \t <step accuracy> values from 0.00 to 5.00 meters\r\n");
-
-    return CLI_OK;
-}
-
-int8_t pstepinfo_callback(uint8_t argc, uint8_t *argv[], void *ref)
-{
-    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
-    float step_length, step_length_acc;
-
-    INFO("Executing %s %s %s\r\n", argv[0], argv[1], argv[2]);
-
-    step_length = (float)atof((char *)argv[1]);
-    step_length_acc = (float)atof((char *)argv[2]);
-
-    INFO("SL, SLA = %f, %f\r\n", step_length, step_length_acc);
-
-    BHY2_ASSERT(bhy2_pdr_set_step_info(step_length, step_length_acc, &cli_ref->bhy2));
-
-    PRINT("Setting step length\r\n\r\n\r\n");
-
-    return CLI_OK;
-}
-
-int8_t psethand_help(void *ref)
-{
-    PRINT("  psethand <hand>\r\n");
-    PRINT("    \t= Set the hand position.\r\n");
-    PRINT("    \t <hand> 0 left, 1 right\r\n");
-
-    return CLI_OK;
-}
-
-int8_t psethand_callback(uint8_t argc, uint8_t *argv[], void *ref)
-{
-    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
-    uint8_t hand;
-
-    INFO("Executing %s %s\r\n", argv[0], argv[1]);
-
-    hand = (uint8_t)atoi((char *)argv[1]);
-
-    BHY2_ASSERT(bhy2_pdr_set_hand(hand, &cli_ref->bhy2));
-
-    PRINT("Setting hand to %s\r\n\r\n", hand ? "right" : "left");
-
-    return CLI_OK;
-}
-
-int8_t pdrver_help(void *ref)
-{
-    PRINT("  pdrver \r\n");
-    PRINT("    \t= Get the driver version.\r\n");
-
-    return CLI_OK;
-}
-
-int8_t pdrver_callback(uint8_t argc, uint8_t *argv[], void *ref)
-{
-    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
-    struct bhy2_pdr_ver version;
-
-    INFO("Executing %\r\n", argv[0]);
-
-    BHY2_ASSERT(bhy2_pdr_get_driver_version(&version, &cli_ref->bhy2));
-
-    PRINT("Driver version: %u.%u.%u. Firmware build number %u\r\n\r\n\r\n",
-          version.major,
-          version.minor,
-          version.patch,
-          version.fw_build);
-
-    return CLI_OK;
-}
-
-int8_t palver_help(void *ref)
-{
-    PRINT("  palver\r\n");
-    PRINT("    \t= Get the algorithm version\r\n");
-
-    return CLI_OK;
-}
-
-int8_t palver_callback(uint8_t argc, uint8_t *argv[], void *ref)
-{
-    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
-    struct bhy2_pdr_ver ver;
-
-    INFO("Executing %s\r\n", argv[0]);
-
-    BHY2_ASSERT(bhy2_pdr_get_algo_version(&ver, &cli_ref->bhy2));
-
-    PRINT("Algorithm version: %u.%u.%u. Firmware build number %u\r\n\r\n\r\n",
-          ver.major,
-          ver.minor,
-          ver.patch,
-          ver.fw_build);
-
-    return CLI_OK;
-}
-
-int8_t pvariant_help(void *ref)
-{
-    PRINT("  pvariant\r\n");
-    PRINT("    \t= Get the PDR variant.\r\n");
-
-    return CLI_OK;
-}
-
-int8_t pvariant_callback(uint8_t argc, uint8_t *argv[], void *ref)
-{
-    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
-    uint8_t variant;
-
-    INFO("Executing %s\r\n", argv[0]);
-
-    BHY2_ASSERT(bhy2_pdr_get_pdr_variant(&variant, &cli_ref->bhy2));
-    PRINT("PDR variant: ");
-    switch (variant)
-    {
-        case BHY2_PDR_VAR_6DOF:
-            PRINT("6DoF");
-            break;
-        case BHY2_PDR_VAR_9DOF:
-            PRINT("9DoF");
-            break;
-        default:
-            PRINT("Undefined [%u]", variant);
-    }
-
-    PRINT("\r\n\r\n\r\n");
-
-    return CLI_OK;
-}
-
-int8_t pdevpos_help(void *ref)
-{
-    PRINT("  pdevpos\r\n");
-    PRINT("    \t= Get the Device position,\r\n");
-
-    return CLI_OK;
-}
-
-int8_t pdevpos_callback(uint8_t argc, uint8_t *argv[], void *ref)
-{
-    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
-    uint8_t dev_pos;
-
-    INFO("Executing %s\r\n", argv[0]);
-
-    BHY2_ASSERT(bhy2_pdr_get_device_position(&dev_pos, &cli_ref->bhy2));
-    PRINT("Device position: ");
-    switch (dev_pos)
-    {
-        case BHY2_PDR_DEV_POS_WRIST:
-            PRINT("Wrist");
-            break;
-        case BHY2_PDR_DEV_POS_HEAD:
-            PRINT("Head");
-            break;
-        case BHY2_PDR_DEV_POS_SHOE:
-            PRINT("Shoe");
-            break;
-        case BHY2_PDR_DEV_POS_BACKPACK:
-            PRINT("Backpack");
-            break;
-        default:
-            PRINT("Undefined [%u]", dev_pos);
-    }
-
-    PRINT("\r\n\r\n\r\n");
 
     return CLI_OK;
 }
@@ -1803,6 +1620,8 @@ int8_t swimsetaxes_callback(uint8_t argc, uint8_t *argv[], void *ref)
     BHY2_ASSERT(bhy2_set_orientation_matrix(BHY2_PHYS_SENSOR_ID_ACCELEROMETER, orient_matrix, &cli_ref->bhy2));
     BHY2_ASSERT(bhy2_set_orientation_matrix(BHY2_PHYS_SENSOR_ID_GYROSCOPE, orient_matrix, &cli_ref->bhy2));
 
+    PRINT("Set the orientation matrix for the Physical Sensors successfully");
+
     return CLI_OK;
 }
 
@@ -1933,6 +1752,13 @@ void parse_klio(const struct bhy2_fifo_parse_data_info *callback_info, void *cal
              data.recognize.index,
              data.recognize.count);
     }
+    else
+    {
+        if (parse_flag & PARSE_FLAG_HEXSTREAM)
+        {
+            stream_hex_data(callback_info->sensor_id, s, ns, callback_info->data_size - 1, callback_info->data_ptr);
+        }
+    }
 
     if (parse_flag & PARSE_FLAG_LOG)
     {
@@ -1987,129 +1813,12 @@ void parse_klio_log(const struct bhy2_fifo_parse_data_info *callback_info, void 
              data.gyro[1],
              data.gyro[2]);
     }
-
-    if (parse_flag & PARSE_FLAG_LOG)
+    else
     {
-        log_data(callback_info->sensor_id,
-                 tns,
-                 callback_info->data_size - 1,
-                 callback_info->data_ptr,
-                 &parse_table->logdev);
-    }
-}
-
-void parse_pdr(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref)
-{
-    uint32_t s, ns;
-    uint64_t tns;
-    struct parse_ref *parse_table = (struct parse_ref *)callback_ref;
-    struct bhy2_pdr_frame pdr_data;
-    uint8_t parse_flag;
-    float x, y, d, hor_acc, heading, heading_acc;
-    char full_reset[] = "Full reset";
-    char track_reset[] = "Track reset";
-    char no_status[] = "";
-    char *full_reset_status;
-    char *track_reset_status;
-    struct parse_sensor_details *sensor_details;
-
-    if (!parse_table || !callback_info)
-    {
-        ERROR("Null reference\r\r\n");
-
-        return;
-    }
-
-    sensor_details = parse_get_sensor_details(callback_info->sensor_id, parse_table);
-    if (!sensor_details)
-    {
-        ERROR("Parse slot not defined\r\n");
-
-        return;
-    }
-
-    parse_flag = sensor_details->parse_flag;
-    time_to_s_ns(*callback_info->time_stamp, &s, &ns, &tns);
-
-    bhy2_pdr_parse_frame(callback_info->data_ptr, &pdr_data);
-    x = pdr_data.pos_x / 10.0f;
-    y = pdr_data.pos_y / 10.0f;
-    d = sqrt((x * x) + (y * y)); /* Displacement from origin */
-    hor_acc = pdr_data.hor_acc / 10.0f;
-    heading = pdr_data.heading / 10.0f;
-    heading_acc = pdr_data.heading_acc / 10.0f;
-    full_reset_status = (pdr_data.status & 0x01) ? full_reset : no_status;
-    track_reset_status = (pdr_data.status & 0x02) ? track_reset : no_status;
-
-    if (parse_flag & PARSE_FLAG_STREAM)
-    {
-        DATA("SID: %u; T: %lu.%09lu; X: %f, Y: %f, D: %f, HorAcc %f; H: %f, HAcc: %f; SC: %u; S: %s %s\r\n",
-             callback_info->sensor_id,
-             s,
-             ns,
-             x,
-             y,
-             d,
-             hor_acc,
-             heading,
-             heading_acc,
-             pdr_data.step_count,
-             full_reset_status,
-             track_reset_status);
-    }
-
-    if (parse_flag & PARSE_FLAG_LOG)
-    {
-        log_data(callback_info->sensor_id,
-                 tns,
-                 callback_info->data_size - 1,
-                 callback_info->data_ptr,
-                 &parse_table->logdev);
-    }
-}
-
-void parse_pdr_log(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref)
-{
-    uint32_t s, ns;
-    uint64_t tns;
-    struct parse_ref *parse_table = (struct parse_ref *)callback_ref;
-    bhy2_pdr_log_frame_t data;
-    uint8_t parse_flag;
-    struct parse_sensor_details *sensor_details;
-
-    if (!parse_table || !callback_info)
-    {
-        ERROR("Null reference\r\r\n");
-
-        return;
-    }
-
-    sensor_details = parse_get_sensor_details(callback_info->sensor_id, parse_table);
-    if (!sensor_details)
-    {
-        ERROR("Parse slot not defined\r\n");
-
-        return;
-    }
-
-    parse_flag = sensor_details->parse_flag;
-
-    time_to_s_ns(*callback_info->time_stamp, &s, &ns, &tns);
-
-    memcpy(&data, callback_info->data_ptr, sizeof(data));
-
-    if (parse_flag & PARSE_FLAG_STREAM)
-    {
-        DATA("SID: %u; T: %lu.%09lu; ax: %.9g, ay: %.9g, az: %.9g, gx: %.9g, gy: %.9g, gz: %.9g\r\n",
-             callback_info->sensor_id,
-             s,
-             ns,
-             data.accel[0],
-             data.accel[1],
-             data.accel[2],
-             data.gyro[0],
-             data.gyro[1],
-             data.gyro[2]);
+        if (parse_flag & PARSE_FLAG_HEXSTREAM)
+        {
+            stream_hex_data(callback_info->sensor_id, s, ns, callback_info->data_size - 1, callback_info->data_ptr);
+        }
     }
 
     if (parse_flag & PARSE_FLAG_LOG)
@@ -2158,6 +1867,13 @@ void parse_acc_gyro(const struct bhy2_fifo_parse_data_info *callback_info, void 
              sensor_data[0],
              sensor_data[1],
              sensor_data[2]);
+    }
+    else
+    {
+        if (parse_flag & PARSE_FLAG_HEXSTREAM)
+        {
+            stream_hex_data(callback_info->sensor_id, s, ns, callback_info->data_size - 1, callback_info->data_ptr);
+        }
     }
 
     if (parse_flag & PARSE_FLAG_LOG)
@@ -2214,6 +1930,13 @@ void parse_air_quality(const struct bhy2_fifo_parse_data_info *callback_info, vo
              aq.voc,
              aq.iaq_accuracy);
     }
+    else
+    {
+        if (parse_flag & PARSE_FLAG_HEXSTREAM)
+        {
+            stream_hex_data(callback_info->sensor_id, s, ns, callback_info->data_size - 1, callback_info->data_ptr);
+        }
+    }
 
     if (parse_flag & PARSE_FLAG_LOG)
     {
@@ -2267,6 +1990,13 @@ void parse_swim(const struct bhy2_fifo_parse_data_info *callback_info, void *cal
              swim_data.lengths_backstroke,
              swim_data.stroke_count);
     }
+    else
+    {
+        if (parse_flag & PARSE_FLAG_HEXSTREAM)
+        {
+            stream_hex_data(callback_info->sensor_id, s, ns, callback_info->data_size - 1, callback_info->data_ptr);
+        }
+    }
 
     if (parse_flag & PARSE_FLAG_LOG)
     {
@@ -2316,6 +2046,13 @@ void parse_multitap(const struct bhy2_fifo_parse_data_info *callback_info, void 
              ns,
              bhi3_multi_tap_string_out[multitap_data]);
     }
+    else
+    {
+        if (parse_flag & PARSE_FLAG_HEXSTREAM)
+        {
+            stream_hex_data(callback_info->sensor_id, s, ns, callback_info->data_size - 1, callback_info->data_ptr);
+        }
+    }
 
     if (parse_flag & PARSE_FLAG_LOG)
     {
@@ -2364,6 +2101,171 @@ void parse_wrist_gesture_detect(const struct bhy2_fifo_parse_data_info *callback
              s,
              ns,
              bhi3_wrist_gesture_detect_output[wrist_gesture_detect_data.wrist_gesture]);
+    }
+    else
+    {
+        if (parse_flag & PARSE_FLAG_HEXSTREAM)
+        {
+            stream_hex_data(callback_info->sensor_id, s, ns, callback_info->data_size - 1, callback_info->data_ptr);
+        }
+    }
+
+    if (parse_flag & PARSE_FLAG_LOG)
+    {
+        log_data(callback_info->sensor_id,
+                 tns,
+                 callback_info->data_size - 1,
+                 callback_info->data_ptr,
+                 &parse_table->logdev);
+    }
+}
+
+void parse_hmc(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref)
+{
+    struct bhy2_head_tracker_quat_data data;
+    uint32_t s, ns;
+    uint64_t tns;
+    struct parse_ref *parse_table = (struct parse_ref *)callback_ref;
+    uint8_t parse_flag;
+    struct parse_sensor_details *sensor_details;
+
+    if (!parse_table || !callback_info)
+    {
+        ERROR("Null reference\r\n");
+
+        return;
+    }
+
+    sensor_details = parse_get_sensor_details(callback_info->sensor_id, parse_table);
+    if (!sensor_details)
+    {
+        INFO("Parse slot not defined for %u\r\n", callback_info->sensor_id);
+
+        return;
+    }
+
+    parse_flag = sensor_details->parse_flag;
+
+    bhy2_head_tracker_quat_parsing(callback_info->data_ptr, &data);
+
+    time_to_s_ns(*callback_info->time_stamp, &s, &ns, &tns);
+
+    if (parse_flag & PARSE_FLAG_STREAM)
+    {
+        DATA("SID: %u; T: %lu.%09lu; x: %f, y: %f, z: %f, w: %f; acc: %u\r\n",
+             callback_info->sensor_id,
+             s,
+             ns,
+             data.x / 16384.0f,
+             data.y / 16384.0f,
+             data.z / 16384.0f,
+             data.w / 16384.0f,
+             data.accuracy);
+    }
+
+    if (parse_flag & PARSE_FLAG_LOG)
+    {
+        log_data(callback_info->sensor_id,
+                 tns,
+                 callback_info->data_size - 1,
+                 callback_info->data_ptr,
+                 &parse_table->logdev);
+    }
+}
+
+void parse_oc(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref)
+{
+    struct bhy2_head_tracker_quat_data data;
+    uint32_t s, ns;
+    uint64_t tns;
+    struct parse_ref *parse_table = (struct parse_ref *)callback_ref;
+    uint8_t parse_flag;
+    struct parse_sensor_details *sensor_details;
+
+    if (!parse_table || !callback_info)
+    {
+        ERROR("Null reference\r\n");
+
+        return;
+    }
+
+    sensor_details = parse_get_sensor_details(callback_info->sensor_id, parse_table);
+    if (!sensor_details)
+    {
+        INFO("Parse slot not defined for %u\r\n", callback_info->sensor_id);
+
+        return;
+    }
+
+    parse_flag = sensor_details->parse_flag;
+
+    bhy2_head_tracker_quat_parsing(callback_info->data_ptr, &data);
+
+    time_to_s_ns(*callback_info->time_stamp, &s, &ns, &tns);
+
+    if (parse_flag & PARSE_FLAG_STREAM)
+    {
+        DATA("SID: %u; T: %lu.%09lu; x: %f, y: %f, z: %f, w: %f; acc: %u\r\n",
+             callback_info->sensor_id,
+             s,
+             ns,
+             data.x / 16384.0f,
+             data.y / 16384.0f,
+             data.z / 16384.0f,
+             data.w / 16384.0f,
+             data.accuracy);
+    }
+
+    if (parse_flag & PARSE_FLAG_LOG)
+    {
+        log_data(callback_info->sensor_id,
+                 tns,
+                 callback_info->data_size - 1,
+                 callback_info->data_ptr,
+                 &parse_table->logdev);
+    }
+}
+
+void parse_ec(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref)
+{
+    struct bhy2_head_tracker_eul_data data;
+    uint32_t s, ns;
+    uint64_t tns;
+    struct parse_ref *parse_table = (struct parse_ref *)callback_ref;
+    uint8_t parse_flag;
+    struct parse_sensor_details *sensor_details;
+
+    if (!parse_table || !callback_info)
+    {
+        ERROR("Null reference\r\n");
+
+        return;
+    }
+
+    sensor_details = parse_get_sensor_details(callback_info->sensor_id, parse_table);
+    if (!sensor_details)
+    {
+        INFO("Parse slot not defined for %u\r\n", callback_info->sensor_id);
+
+        return;
+    }
+
+    parse_flag = sensor_details->parse_flag;
+
+    bhy2_head_tracker_eul_parsing(callback_info->data_ptr, &data);
+
+    time_to_s_ns(*callback_info->time_stamp, &s, &ns, &tns);
+
+    if (parse_flag & PARSE_FLAG_STREAM)
+    {
+        DATA("SID: %u; T: %lu.%09lu; h: %f, p: %f, r: %f; acc: %u\r\n",
+             callback_info->sensor_id,
+             s,
+             ns,
+             (data.heading * 360.0f) / 32768.0f,
+             (data.pitch * 360.0f) / 32768.0f,
+             (data.roll * 360.0f) / 32768.0f,
+             data.accuracy);
     }
 
     if (parse_flag & PARSE_FLAG_LOG)
@@ -3448,6 +3350,13 @@ static void parse_custom_sensor_default(const struct bhy2_fifo_parse_data_info *
 
         PRINT_D("\r\n");
     }
+    else
+    {
+        if (parse_flag & PARSE_FLAG_HEXSTREAM)
+        {
+            stream_hex_data(callback_info->sensor_id, s, ns, callback_info->data_size - 1, callback_info->data_ptr);
+        }
+    }
 
     if (parse_flag & PARSE_FLAG_LOG)
     {
@@ -4083,6 +3992,20 @@ static void log_data(uint8_t sid, uint64_t tns, uint8_t event_size, uint8_t *eve
     }
 }
 
+static void stream_hex_data(uint8_t sid, uint32_t ts, uint32_t tns, uint8_t event_size, uint8_t *event_payload)
+{
+    /* Print sensor ID */
+    HEX("%02x%08x%08x", sid, ts, tns);
+
+    for (uint16_t i = 0; i < event_size; i++)
+    {
+        /* Output raw data in hex */
+        PRINT_H("%02x", event_payload[i]);
+    }
+
+    PRINT_D("\r\n");
+}
+
 static void write_meta_info(struct logbin_dev *log, struct bhy2_dev *bhy2)
 {
     logbin_start_meta(log);
@@ -4110,6 +4033,42 @@ static void write_meta_info(struct logbin_dev *log, struct bhy2_dev *bhy2)
 #ifndef PC
     coines_set_pin_config(COINES_APP30_LED_G, COINES_PIN_DIRECTION_OUT, COINES_PIN_VALUE_HIGH);
 #endif
+}
+
+static void schema_info(struct bhy2_dev *bhy2)
+{
+    /* Update virtual sensor */
+    bhy2_update_virtual_sensor_list(bhy2);
+
+    /* Get present virtual sensor */
+    bhy2_get_virt_sensor_list(bhy2);
+
+    PRINT("Schema List.\r\n");
+    PRINT(
+        "Sensor ID |                          Sensor Name | Event Size |      Parse Format      |      Axis Names      |  Scaling  |\r\n");
+    PRINT(
+        "----------+--------------------------------------+------------+------------------------+----------------------+-----------|\r\n");
+
+    for (uint8_t i = 1; i < BHY2_SENSOR_ID_MAX; i++)
+    {
+        if (bhy2_is_sensor_available(i, bhy2))
+        {
+            if (i < BHY2_SENSOR_ID_CUSTOM_START)
+            {
+                PRINT(" %8u | %36s ", i, get_sensor_name(i));
+            }
+            else
+            {
+                PRINT(" %8u | %36s ", i, custom_driver_information[i - BHY2_SENSOR_ID_CUSTOM_START].sensor_name);
+            }
+
+            PRINT("| %10u | %22s | %20s | %9.4f |\r\n",
+                  bhy2->event_size[i] - 1,
+                  get_sensor_parse_format(i),
+                  get_sensor_axis_names(i),
+                  get_sensor_default_scaling(i));
+        }
+    }
 }
 
 int8_t dmode_help(void *ref)
@@ -4623,12 +4582,12 @@ int8_t accsetpwm_help(void *ref)
 int8_t accsetpwm_callback(uint8_t argc, uint8_t *argv[], void *ref)
 {
     struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
-    enum bhi3_phy_sensor_power_mode accpwm = 0;
+    enum bhi3_phy_sensor_acc_power_mode accpwm = 0;
 
     accpwm = (uint8_t)atoi((char *)argv[1]);
     BHY2_ASSERT(bhi3_set_acc_power_mode((uint8_t *)&accpwm, &cli_ref->bhy2));
 
-    PRINT("Set the Accelerometer Power Mode to %s\r\n", bhi3_phy_sensor_pwm_output[accpwm]);
+    PRINT("Set the Accelerometer Power Mode to %s\r\n", bhi3_phy_sensor_acc_pwm_output[accpwm]);
 
     return CLI_OK;
 }
@@ -4644,11 +4603,11 @@ int8_t accgetpwm_help(void *ref)
 int8_t accgetpwm_callback(uint8_t argc, uint8_t *argv[], void *ref)
 {
     struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
-    enum bhi3_phy_sensor_power_mode accpwm = 0;
+    enum bhi3_phy_sensor_acc_power_mode accpwm = 0;
 
     BHY2_ASSERT(bhi3_get_acc_power_mode((uint8_t *)&accpwm, &cli_ref->bhy2));
 
-    PRINT("Accelerometer Power Mode : %s\r\n", bhi3_phy_sensor_pwm_output[accpwm]);
+    PRINT("Accelerometer Power Mode : %s\r\n", bhi3_phy_sensor_acc_pwm_output[accpwm]);
 
     return CLI_OK;
 }
@@ -4658,7 +4617,7 @@ int8_t gyrosetfoc_help(void *ref)
     PRINT("  gyrosetfoc <x> <y> <z> \r\n");
     PRINT("    \t -Set the Gyroscope Fast Offset Calibration (in Hex)\r\n");
     PRINT("    \t -Range of Gyroscope FOC value : -512 to 511 [10Bit Resolution]\r\n");
-    PRINT("    \t gyrosetfoc 0xff16 0x00f8 0x0200\r\n");
+    PRINT("    \t gyrosetfoc 0x0016 0x00f8 0x080\r\n");
 
     return CLI_OK;
 }
@@ -4832,6 +4791,7 @@ int8_t gyrosetpwm_help(void *ref)
     PRINT("  gyrosetpwm <power_mode> \r\n");
     PRINT("    \t -Set the Gyroscope Power Mode\r\n");
     PRINT("    \t -'0' corresponds to Normal Mode\r\n");
+    PRINT("    \t -'1' corresponds to Performance Mode\r\n");
     PRINT("    \t -'2' corresponds to Low Power Mode\r\n");
 
     return CLI_OK;
@@ -4840,12 +4800,12 @@ int8_t gyrosetpwm_help(void *ref)
 int8_t gyrosetpwm_callback(uint8_t argc, uint8_t *argv[], void *ref)
 {
     struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
-    enum bhi3_phy_sensor_power_mode gyropwm = 0;
+    enum bhi3_phy_sensor_gyro_power_mode gyropwm = 0;
 
     gyropwm = (uint8_t)atoi((char *)argv[1]);
     BHY2_ASSERT(bhi3_set_gyro_power_mode((uint8_t *)&gyropwm, &cli_ref->bhy2));
 
-    PRINT("Set the Gyroscope Power Mode to %s\r\n", bhi3_phy_sensor_pwm_output[gyropwm]);
+    PRINT("Set the Gyroscope Power Mode to %s\r\n", bhi3_phy_sensor_gyro_pwm_output[gyropwm]);
 
     return CLI_OK;
 }
@@ -4861,11 +4821,11 @@ int8_t gyrogetpwm_help(void *ref)
 int8_t gyrogetpwm_callback(uint8_t argc, uint8_t *argv[], void *ref)
 {
     struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
-    enum bhi3_phy_sensor_power_mode gyropwm = 0;
+    enum bhi3_phy_sensor_gyro_power_mode gyropwm = 0;
 
     BHY2_ASSERT(bhi3_get_gyro_power_mode((uint8_t *)&gyropwm, &cli_ref->bhy2));
 
-    PRINT("Gyroscope Power Mode : %s\r\n", bhi3_phy_sensor_pwm_output[gyropwm]);
+    PRINT("Gyroscope Power Mode : %s\r\n", bhi3_phy_sensor_gyro_pwm_output[gyropwm]);
 
     return CLI_OK;
 }
@@ -5169,6 +5129,308 @@ int8_t wgdgetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref)
     PRINT("lp_mean_filter_coeff : 0x%04x\r\n", wgd.lp_mean_filter_coeff);
     PRINT("max_duration_jiggle_peaks : 0x%04x\r\n", wgd.max_duration_jiggle_peaks);
     PRINT("device_position : 0x%02x\r\n", wgd.device_position);
+
+    return CLI_OK;
+}
+
+int8_t hmctrig_help(void *ref)
+{
+    PRINT("  hmctrig\r\n");
+    PRINT("    \t= Trigger Head Misalignment Calibration\r\n");
+
+    return CLI_OK;
+}
+
+int8_t hmctrig_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    uint8_t hmc_calib_state[4] = { 0 };
+
+    INFO("Executing %s\r\n", argv[0]);
+
+    hmc_calib_state[0] = BHY2_HEAD_ORI_HMC_TRIGGER_CALIB_SET;
+    BHY2_ASSERT(bhy2_head_tracker_trigger_hmc_calibration(hmc_calib_state, &cli_ref->bhy2));
+
+    PRINT("Triggered Head Misalignment Calibration\r\n");
+
+    return CLI_OK;
+}
+
+int8_t hmcsetcnfg_help(void *ref)
+{
+    PRINT("  hmcsetcnfg <sp_max_dur> <sp_min_dur> <sp_max_samples> <acc_diff_th> \r\n");
+    PRINT("    \t -Set the Head Misalignment Configuration (in Hex)\r\n");
+    PRINT(
+        "    \t <sp_max_dur> : maximum still phase duration required for pitch and roll calibration (u8), resolution 1 sec/LSB\r\n");
+    PRINT(
+        "    \t <sp_min_dur> : minimum still phase duration required for pitch and roll calibration (u8), resolution 1 sec/LSB\r\n");
+    PRINT(
+        "    \t <sp_max_samples> : maximal number of samples for still phase for the dynamic part of head misalignment calibration (u8), resolution 1 sample/LSB\r\n");
+    PRINT(
+        "    \t <acc_diff_th> : threshold of acceleration difference to detect motion in acceleration signal, (i32), resolution 1 mg/LSB [includes 1 bit sign, 8 bits exponent and 23 bits fraction]\r\n");
+    PRINT("    \t eg. hmcsetcnfg 0x06 0x02 0x32 0x00002042 \r\n");
+
+    return CLI_OK;
+}
+
+int8_t hmcsetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    struct bhy2_head_tracker_misalignment_config hmc_config = { 0 };
+
+    hmc_config.still_phase_max_dur = string_to_int((char *)argv[1]);
+    hmc_config.still_phase_min_dur = string_to_int((char *)argv[2]);
+    hmc_config.still_phase_max_samples = string_to_int((char *)argv[3]);
+    hmc_config.acc_diff_threshold = string_to_int((char *)argv[4]);
+
+    BHY2_ASSERT(bhy2_head_tracker_set_hmc_configuration((uint8_t *)&hmc_config, &cli_ref->bhy2));
+
+    PRINT("Head Misalignment Configuration set successfully \r\n");
+
+    return CLI_OK;
+}
+
+int8_t hmcgetcnfg_help(void *ref)
+{
+    PRINT("  hmcgetcnfg \r\n");
+    PRINT("    \t -Get the Head Misalignment Configuration\r\n");
+
+    return CLI_OK;
+}
+
+int8_t hmcgetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    struct bhy2_head_tracker_misalignment_config hmc_config = { 0 };
+
+    BHY2_ASSERT(bhy2_head_tracker_get_hmc_configuration((uint8_t *)&hmc_config, &cli_ref->bhy2));
+
+    PRINT("still_phase_max_dur : 0x%02x\r\n", hmc_config.still_phase_max_dur);
+    PRINT("still_phase_min_dur : 0x%02x\r\n", hmc_config.still_phase_min_dur);
+    PRINT("still_phase_max_samples : 0x%02x\r\n", hmc_config.still_phase_max_samples);
+    PRINT("acc_diff_threshold : 0x%08x\r\n", hmc_config.acc_diff_threshold);
+
+    return CLI_OK;
+}
+
+int8_t hmcsetdefcnfg_help(void *ref)
+{
+    PRINT("  hmcsetdefcnfg\r\n");
+    PRINT("    \t= Set Default Head Misalignment Configuration\r\n");
+
+    return CLI_OK;
+}
+
+int8_t hmcsetdefcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    uint8_t hmcsetdefcnfg_state[4] = { 0 };
+
+    INFO("Executing %s\r\n", argv[0]);
+
+    hmcsetdefcnfg_state[0] = BHY2_HEAD_ORI_HMC_SET_DEF_CONFIG_SET;
+    BHY2_ASSERT(bhy2_head_tracker_set_default_hmc_configuration(hmcsetdefcnfg_state, &cli_ref->bhy2));
+
+    PRINT("Set Default Head Misalignment Calibration successfully\r\n");
+
+    return CLI_OK;
+}
+
+int8_t hmcver_help(void *ref)
+{
+    PRINT("  hmcver \r\n");
+    PRINT("    \t= Get the Head Misalignment Calibrator version.\r\n");
+
+    return CLI_OK;
+}
+
+int8_t hmcver_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    struct bhy2_head_tracker_ver hmc_version;
+
+    INFO("Executing %\r\n", argv[0]);
+
+    BHY2_ASSERT(bhy2_head_tracker_get_hmc_version(&hmc_version, &cli_ref->bhy2));
+
+    PRINT("Head Misalignment Calibrator version: %u.%u.%u\r\n\r\n",
+          hmc_version.major,
+          hmc_version.minor,
+          hmc_version.patch);
+
+    return CLI_OK;
+}
+
+int8_t hmcsetcalcorrq_help(void *ref)
+{
+    PRINT("  hmcsetcalcorrq <quat_x> <quat_y> <quat_z> <quat_w> \r\n");
+    PRINT("    \t= Set the Head Misalignment Quaternion Calibration Correction\r\n");
+    PRINT(
+        "    \t <quat_x> : quaternion x, (i32), resolution 1 mg/LSB [includes 1 bit sign, 8 bits exponent and 23 bits fraction]\r\n");
+    PRINT(
+        "    \t <quat_y> : quaternion y, (i32), resolution 1 mg/LSB [includes 1 bit sign, 8 bits exponent and 23 bits fraction]\r\n");
+    PRINT(
+        "    \t <quat_z> : quaternion z, (i32), resolution 1 mg/LSB [includes 1 bit sign, 8 bits exponent and 23 bits fraction]\r\n");
+    PRINT(
+        "    \t <quat_w> : quaternion w, (i32), resolution 1 mg/LSB [includes 1 bit sign, 8 bits exponent and 23 bits fraction]\r\n");
+    PRINT("    \t eg. hmcsetcalcorrq 0x00000600 0x00000002 0x00320000 0x3f000000 \r\n");
+
+    return CLI_OK;
+}
+
+int8_t hmcsetcalcorrq_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    struct bhy2_head_tracker_misalignment_quat_corr hmc_quat_corr = { 0 };
+
+    INFO("Executing %s\r\n", argv[0]);
+
+    hmc_quat_corr.quaternion_x = string_to_int((char *)argv[1]);
+    hmc_quat_corr.quaternion_y = string_to_int((char *)argv[2]);
+    hmc_quat_corr.quaternion_z = string_to_int((char *)argv[3]);
+    hmc_quat_corr.quaternion_w = string_to_int((char *)argv[4]);
+    hmc_quat_corr.accuracy = 0;
+    BHY2_ASSERT(bhy2_head_tracker_set_hmc_quat_calib_corr_config(&hmc_quat_corr, &cli_ref->bhy2));
+
+    PRINT("Head Misalignment Quaternion Calibration Correction set successfully\r\n");
+
+    return CLI_OK;
+}
+
+int8_t hmcgetcalcorrq_help(void *ref)
+{
+    PRINT("  hmcgetcalcorrq \r\n");
+    PRINT("    \t= Get the Head Misalignment Quaternion Calibration Correction\r\n");
+
+    return CLI_OK;
+}
+
+int8_t hmcgetcalcorrq_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    struct bhy2_head_tracker_misalignment_quat_corr hmc_quat_corr = { 0 };
+
+    BHY2_ASSERT(bhy2_head_tracker_get_hmc_quat_calib_corr_config((uint8_t *)&hmc_quat_corr, &cli_ref->bhy2));
+
+    PRINT("quaternion_x : 0x%08x\r\n", hmc_quat_corr.quaternion_x);
+    PRINT("quaternion_y : 0x%08x\r\n", hmc_quat_corr.quaternion_y);
+    PRINT("quaternion_z : 0x%08x\r\n", hmc_quat_corr.quaternion_z);
+    PRINT("quaternion_w : 0x%08x\r\n", hmc_quat_corr.quaternion_w);
+    PRINT("accuracy : 0x%08x\r\n", hmc_quat_corr.accuracy);
+
+    return CLI_OK;
+}
+
+int8_t hosetheadcorrq_help(void *ref)
+{
+    PRINT("  hosetheadcorrq\r\n");
+    PRINT("    \t= Set Initial Heading Correction, only for IMU Head Orientation Quaternion\r\n");
+    PRINT("    \t -1/0 : Enable/Disable Initial Heading Correction [Quaternion] \r\n");
+
+    return CLI_OK;
+}
+
+int8_t hosetheadcorrq_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    uint8_t ho_quat_head_corr_state[4] = { 0 };
+
+    INFO("Executing %s\r\n", argv[0]);
+
+    ho_quat_head_corr_state[0] = string_to_int((char *)argv[1]);
+    BHY2_ASSERT(bhy2_head_tracker_set_quat_initial_head_correction(ho_quat_head_corr_state, &cli_ref->bhy2));
+
+    PRINT("Quaternion Initial Heading Correction %s\r\n",
+          (ho_quat_head_corr_state[0] == BHY2_HEAD_ORI_QUAT_INITIAL_HEAD_CORR_ENABLE) ? "Enabled" : "Disabled");
+
+    return CLI_OK;
+}
+
+int8_t hogetheadcorrq_help(void *ref)
+{
+    PRINT("  hogetheadcorrq \r\n");
+    PRINT("    \t= Get Initial Heading Correction, only for IMU Head Orientation Quaternion\r\n");
+
+    return CLI_OK;
+}
+
+int8_t hogetheadcorrq_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    uint8_t ho_quat_head_corr_state[4] = { 0 };
+
+    BHY2_ASSERT(bhy2_head_tracker_get_quat_initial_head_correction(ho_quat_head_corr_state, &cli_ref->bhy2));
+
+    PRINT("Quaternion Initial Heading Correction Status : %s\r\n",
+          (ho_quat_head_corr_state[0] == BHY2_HEAD_ORI_QUAT_INITIAL_HEAD_CORR_ENABLE) ? "Enabled" : "Disabled");
+
+    return CLI_OK;
+}
+
+int8_t hover_help(void *ref)
+{
+    PRINT("  hover \r\n");
+    PRINT("    \t= Get IMU/NDOF Head Orientation Version \r\n");
+
+    return CLI_OK;
+}
+
+int8_t hover_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    struct bhy2_head_tracker_ver ho_version;
+
+    INFO("Executing %\r\n", argv[0]);
+
+    BHY2_ASSERT(bhy2_head_tracker_get_ho_version(&ho_version, &cli_ref->bhy2));
+
+    PRINT("IMU/NDOF Head Orientation version: %u.%u.%u\r\n\r\n", ho_version.major, ho_version.minor, ho_version.patch);
+
+    return CLI_OK;
+}
+
+int8_t hosetheadcorre_help(void *ref)
+{
+    PRINT("  hosetheadcorre\r\n");
+    PRINT("    \t= Set Initial Heading Correction, only for IMU Head Orientation Euler\r\n");
+    PRINT("    \t -1/0 : Enable/Disable Initial Heading Correction [Euler] \r\n");
+
+    return CLI_OK;
+}
+
+int8_t hosetheadcorre_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    uint8_t ho_eul_head_corr_state[4] = { 0 };
+
+    INFO("Executing %s\r\n", argv[0]);
+
+    ho_eul_head_corr_state[0] = string_to_int((char *)argv[1]);
+    BHY2_ASSERT(bhy2_head_tracker_set_eul_initial_head_correction(ho_eul_head_corr_state, &cli_ref->bhy2));
+
+    PRINT("Euler Initial Heading Correction %s\r\n",
+          (ho_eul_head_corr_state[0] == BHY2_HEAD_ORI_EUL_INITIAL_HEAD_CORR_ENABLE) ? "Enabled" : "Disabled");
+
+    return CLI_OK;
+}
+
+int8_t hogetheadcorre_help(void *ref)
+{
+    PRINT("  hogetheadcorre \r\n");
+    PRINT("    \t= Get Initial Heading Correction, only for IMU Head Orientation Euler\r\n");
+
+    return CLI_OK;
+}
+
+int8_t hogetheadcorre_callback(uint8_t argc, uint8_t *argv[], void *ref)
+{
+    struct bhy2_cli_ref *cli_ref = (struct bhy2_cli_ref *)ref;
+    uint8_t ho_eul_head_corr_state[4] = { 0 };
+
+    BHY2_ASSERT(bhy2_head_tracker_get_eul_initial_head_correction(ho_eul_head_corr_state, &cli_ref->bhy2));
+
+    PRINT("Euler Initial Heading Correction Status : %s\r\n",
+          (ho_eul_head_corr_state[0] == BHY2_HEAD_ORI_EUL_INITIAL_HEAD_CORR_ENABLE) ? "Enabled" : "Disabled");
 
     return CLI_OK;
 }

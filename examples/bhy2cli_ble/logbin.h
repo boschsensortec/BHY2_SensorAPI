@@ -38,10 +38,10 @@
 #ifndef _LOGBIN_H_
 #define _LOGBIN_H_
 
-/* Start of CPP guard */
+/* Start of CPP Guard */
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif /*__cplusplus */
 
 #include <stdint.h>
 #include <stddef.h>
@@ -81,9 +81,9 @@ void logbin_add_data(uint8_t sensor_id,
                      const uint8_t *event_payload,
                      struct logbin_dev *dev);
 
-/* End of CPP guard */
+/* End of CPP Guard */
 #ifdef __cplusplus
 }
-#endif
+#endif /*__cplusplus */
 
 #endif /* _LOGBIN_H_ */

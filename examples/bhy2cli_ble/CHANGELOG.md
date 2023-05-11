@@ -1,5 +1,18 @@
 # Changelog
 
+# v0.4.9
+- Added support HEX streaming mode.
+- Added support for listing the schema information of the loaded sensors
+- Added support for Head Orientation virtual sensors.
+- Added support for Head Orientation Parameter Configuration.
+- Removed the support for PDR
+- Rectified parsing callback to s16_to_float for Temperature Sensor
+
+Known Limitations -
+- 'gyrogettat' does not return expected output.
+- For Head Orientation sensors, for subsequent sensor activation with different ODRs, the ODR change is not reflected.
+- For 'dactse' command, parsing flag is not updated.
+
 # v0.4.8
 - Optimised the Data Injection feature for generic use by removing Sensor ID dependnecy
 - Integrated generic file parser for txt/bin files and resolved length dependency, for Data Injection

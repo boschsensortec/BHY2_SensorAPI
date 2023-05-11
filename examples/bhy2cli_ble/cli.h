@@ -38,10 +38,10 @@
 #ifndef _CLI_H_
 #define _CLI_H_
 
-/* Start of CPP guard */
+/* Start of CPP Guard */
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif /*__cplusplus */
 
 #include <stdint.h>
 #include <stddef.h>
@@ -79,9 +79,9 @@ int8_t cli_run(uint8_t argc, uint8_t *argv[], const cli_dev_t *dev);
 
 int8_t cli_help(void *ref, const cli_dev_t *dev);
 
-/* End of CPP guard */
+/* End of CPP Guard */
 #ifdef __cplusplus
 }
-#endif
+#endif /*__cplusplus */
 
 #endif /* _CLI_H_ */

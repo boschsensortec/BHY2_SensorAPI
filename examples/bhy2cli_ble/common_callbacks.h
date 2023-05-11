@@ -38,10 +38,10 @@
 #ifndef _COMMON_CALLBACKS_H_
 #define _COMMON_CALLBACKS_H_
 
-/* Start of CPP guard */
+/* Start of CPP Guard */
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif /*__cplusplus */
 
 #include <stdint.h>
 
@@ -102,9 +102,9 @@ int8_t cls_callback(uint8_t argc, uint8_t *argv[], void *ref);
 
 #endif
 
-/* End of CPP guard */
+/* End of CPP Guard */
 #ifdef __cplusplus
 }
-#endif
+#endif /*__cplusplus */
 
 #endif /* _COMMON_CALLBACKS_H_ */

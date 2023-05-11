@@ -41,9 +41,6 @@
 #include "verbose.h"
 #include "coines.h"
 
-#define DATA(format, ...)     verbose("[D]" format,##__VA_ARGS__)
-#define PRINT_D(format, ...)  verbose(format,##__VA_ARGS__)
-
 static void time_to_s_ns(uint64_t time_ticks, uint32_t *s, uint32_t *ns, uint64_t *tns)
 {
     *tns = time_ticks * 15625; /* timestamp is now in nanoseconds */
@@ -63,6 +60,20 @@ static void log_data(uint8_t sid, uint64_t tns, uint8_t event_size, uint8_t *eve
         coines_set_pin_config(COINES_APP30_LED_G, COINES_PIN_DIRECTION_OUT, COINES_PIN_VALUE_HIGH);
 #endif
     }
+}
+
+static void stream_hex_data(uint8_t sid, uint32_t ts, uint32_t tns, uint8_t event_size, uint8_t *event_payload)
+{
+    /* Print sensor ID */
+    HEX("%02x%08x%08x", sid, ts, tns);
+
+    for (uint16_t i = 0; i < event_size; i++)
+    {
+        /* Output raw data in hex */
+        PRINT_H("%02x", event_payload[i]);
+    }
+
+    PRINT_D("\r\n");
 }
 
 struct parse_sensor_details *parse_get_sensor_details(uint8_t id, struct parse_ref *ref)
@@ -257,6 +268,13 @@ void parse_3axis_s16(const struct bhy2_fifo_parse_data_info *callback_info, void
              data.z * scaling_factor,
              sensor_details->accuracy);
     }
+    else
+    {
+        if (parse_flag & PARSE_FLAG_HEXSTREAM)
+        {
+            stream_hex_data(callback_info->sensor_id, s, ns, callback_info->data_size - 1, callback_info->data_ptr);
+        }
+    }
 
     if (parse_flag & PARSE_FLAG_LOG)
     {
@@ -311,6 +329,13 @@ void parse_euler(const struct bhy2_fifo_parse_data_info *callback_info, void *ca
              data.roll * scaling_factor,
              sensor_details->accuracy);
     }
+    else
+    {
+        if (parse_flag & PARSE_FLAG_HEXSTREAM)
+        {
+            stream_hex_data(callback_info->sensor_id, s, ns, callback_info->data_size - 1, callback_info->data_ptr);
+        }
+    }
 
     if (parse_flag & PARSE_FLAG_LOG)
     {
@@ -364,6 +389,13 @@ void parse_quaternion(const struct bhy2_fifo_parse_data_info *callback_info, voi
              data.w / 16384.0f,
              ((data.accuracy * 180.0f) / 16384.0f) / 3.141592653589793f);
     }
+    else
+    {
+        if (parse_flag & PARSE_FLAG_HEXSTREAM)
+        {
+            stream_hex_data(callback_info->sensor_id, s, ns, callback_info->data_size - 1, callback_info->data_ptr);
+        }
+    }
 
     if (parse_flag & PARSE_FLAG_LOG)
     {
@@ -411,6 +443,13 @@ void parse_s16_as_float(const struct bhy2_fifo_parse_data_info *callback_info, v
     {
         DATA("SID: %u; T: %lu.%09lu; %f\r\n", callback_info->sensor_id, s, ns, data * scaling_factor);
     }
+    else
+    {
+        if (parse_flag & PARSE_FLAG_HEXSTREAM)
+        {
+            stream_hex_data(callback_info->sensor_id, s, ns, callback_info->data_size - 1, callback_info->data_ptr);
+        }
+    }
 
     if (parse_flag & PARSE_FLAG_LOG)
     {
@@ -456,6 +495,13 @@ void parse_scalar_u32(const struct bhy2_fifo_parse_data_info *callback_info, voi
     {
         DATA("SID: %u; T: %lu.%09lu; %lu\r\n", callback_info->sensor_id, s, ns, data);
     }
+    else
+    {
+        if (parse_flag & PARSE_FLAG_HEXSTREAM)
+        {
+            stream_hex_data(callback_info->sensor_id, s, ns, callback_info->data_size - 1, callback_info->data_ptr);
+        }
+    }
 
     if (parse_flag & PARSE_FLAG_LOG)
     {
@@ -497,6 +543,13 @@ void parse_scalar_event(const struct bhy2_fifo_parse_data_info *callback_info, v
     if (parse_flag & PARSE_FLAG_STREAM)
     {
         DATA("SID: %u; T: %lu.%09lu;\r\n", callback_info->sensor_id, s, ns);
+    }
+    else
+    {
+        if (parse_flag & PARSE_FLAG_HEXSTREAM)
+        {
+            stream_hex_data(callback_info->sensor_id, s, ns, callback_info->data_size - 1, callback_info->data_ptr);
+        }
     }
 
     if (parse_flag & PARSE_FLAG_LOG)
@@ -606,6 +659,13 @@ void parse_activity(const struct bhy2_fifo_parse_data_info *callback_info, void 
 
         PRINT_D("\r\n");
     }
+    else
+    {
+        if (parse_flag & PARSE_FLAG_HEXSTREAM)
+        {
+            stream_hex_data(callback_info->sensor_id, s, ns, callback_info->data_size - 1, callback_info->data_ptr);
+        }
+    }
 
     if (parse_flag & PARSE_FLAG_LOG)
     {
@@ -652,6 +712,13 @@ void parse_u16_as_float(const struct bhy2_fifo_parse_data_info *callback_info, v
     if (parse_flag & PARSE_FLAG_STREAM)
     {
         DATA("SID: %u; T: %lu.%09lu; %f\r\n", callback_info->sensor_id, s, ns, data * scaling_factor);
+    }
+    else
+    {
+        if (parse_flag & PARSE_FLAG_HEXSTREAM)
+        {
+            stream_hex_data(callback_info->sensor_id, s, ns, callback_info->data_size - 1, callback_info->data_ptr);
+        }
     }
 
     if (parse_flag & PARSE_FLAG_LOG)
@@ -700,6 +767,13 @@ void parse_u24_as_float(const struct bhy2_fifo_parse_data_info *callback_info, v
     {
         DATA("SID: %u; T: %lu.%09lu; %f\r\n", callback_info->sensor_id, s, ns, (float)data * scaling_factor);
     }
+    else
+    {
+        if (parse_flag & PARSE_FLAG_HEXSTREAM)
+        {
+            stream_hex_data(callback_info->sensor_id, s, ns, callback_info->data_size - 1, callback_info->data_ptr);
+        }
+    }
 
     if (parse_flag & PARSE_FLAG_LOG)
     {
@@ -745,6 +819,13 @@ void parse_proximity(const struct bhy2_fifo_parse_data_info *callback_info, void
     {
         DATA("SID: %u; T: %lu.%09lu; %s\r\n", callback_info->sensor_id, s, ns, text);
     }
+    else
+    {
+        if (parse_flag & PARSE_FLAG_HEXSTREAM)
+        {
+            stream_hex_data(callback_info->sensor_id, s, ns, callback_info->data_size - 1, callback_info->data_ptr);
+        }
+    }
 
     if (parse_flag & PARSE_FLAG_LOG)
     {
@@ -788,6 +869,13 @@ void parse_scalar_u8(const struct bhy2_fifo_parse_data_info *callback_info, void
     if (parse_flag & PARSE_FLAG_STREAM)
     {
         DATA("SID: %u; T: %lu.%09lu; %u\r\n", callback_info->sensor_id, s, ns, data);
+    }
+    else
+    {
+        if (parse_flag & PARSE_FLAG_HEXSTREAM)
+        {
+            stream_hex_data(callback_info->sensor_id, s, ns, callback_info->data_size - 1, callback_info->data_ptr);
+        }
     }
 
     if (parse_flag & PARSE_FLAG_LOG)
@@ -836,6 +924,13 @@ void parse_generic(const struct bhy2_fifo_parse_data_info *callback_info, void *
         }
 
         PRINT_D("\r\n");
+    }
+    else
+    {
+        if (parse_flag & PARSE_FLAG_HEXSTREAM)
+        {
+            stream_hex_data(callback_info->sensor_id, s, ns, callback_info->data_size - 1, callback_info->data_ptr);
+        }
     }
 
     if (parse_flag & PARSE_FLAG_LOG)
@@ -899,6 +994,13 @@ void parse_device_ori(const struct bhy2_fifo_parse_data_info *callback_info, voi
     {
         DATA("SID: %u; T: %lu.%09lu; %s\r\n", callback_info->sensor_id, s, ns, ori);
     }
+    else
+    {
+        if (parse_flag & PARSE_FLAG_HEXSTREAM)
+        {
+            stream_hex_data(callback_info->sensor_id, s, ns, callback_info->data_size - 1, callback_info->data_ptr);
+        }
+    }
 
     if (parse_flag & PARSE_FLAG_LOG)
     {
@@ -941,6 +1043,13 @@ void parse_gps(const struct bhy2_fifo_parse_data_info *callback_info, void *call
     if (parse_flag & PARSE_FLAG_STREAM)
     {
         DATA("[GPS]; T: %lu.%09lu; data: %s\r\n", s, ns, callback_info->data_ptr);
+    }
+    else
+    {
+        if (parse_flag & PARSE_FLAG_HEXSTREAM)
+        {
+            stream_hex_data(callback_info->sensor_id, s, ns, callback_info->data_size - 1, callback_info->data_ptr);
+        }
     }
 
     if (parse_flag & PARSE_FLAG_LOG)

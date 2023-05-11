@@ -38,10 +38,10 @@
 #ifndef BHY2CLI_PARSE_H_
 #define BHY2CLI_PARSE_H_
 
-/* Start of CPP guard */
+/* Start of CPP Guard */
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif /*__cplusplus */
 
 #include <stdbool.h>
 
@@ -52,6 +52,7 @@ extern "C" {
 #define PARSE_FLAG_NONE              UINT8_C(0x00)
 #define PARSE_FLAG_STREAM            UINT8_C(0x01)
 #define PARSE_FLAG_LOG               UINT8_C(0x02)
+#define PARSE_FLAG_HEXSTREAM         UINT8_C(0x04)
 
 #define PARSE_SET_FLAG(var, flag)    (var | flag)
 #define PARSE_CLEAR_FLAG(var, flag)  (var & ~flag)
@@ -105,13 +106,11 @@ void parse_device_ori(const struct bhy2_fifo_parse_data_info *callback_info, voi
 
 void parse_gps(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
 
-void parse_pdr(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
-
 void parse_debug_message(const struct bhy2_fifo_parse_data_info *callback_info, void *callback_ref);
 
-/* End of CPP guard */
+/* End of CPP Guard */
 #ifdef __cplusplus
 }
-#endif
+#endif /*__cplusplus */
 
 #endif /* BHY2CLI_PARSE_H_ */

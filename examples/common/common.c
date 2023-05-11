@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -722,12 +722,6 @@ char *get_sensor_name(uint8_t sensor_id)
         case BHY2_SENSOR_ID_KLIO_LOG:
             ret = "Klio log";
             break;
-        case BHY2_SENSOR_ID_PDR:
-            ret = "Pedestrian Dead Reckoning";
-            break;
-        case BHY2_SENSOR_ID_PDR_LOG:
-            ret = "Pedestrian Dead Reckoning Log";
-            break;
         case BHY2_SENSOR_ID_SWIM:
             ret = "Swim recognition";
             break;
@@ -842,6 +836,21 @@ char *get_sensor_name(uint8_t sensor_id)
         case BHY2_SENSOR_ID_AIR_QUALITY:
             ret = "Air Quality";
             break;
+        case BHY2_SENSOR_ID_HEAD_ORI_MIS_ALG:
+            ret = "Head Misalignment Calibrator";
+            break;
+        case BHY2_SENSOR_ID_IMU_HEAD_ORI_Q:
+            ret = "IMU Head Orientation Quaternion";
+            break;
+        case BHY2_SENSOR_ID_NDOF_HEAD_ORI_Q:
+            ret = "NDOF Head Orientation Quaternion";
+            break;
+        case BHY2_SENSOR_ID_IMU_HEAD_ORI_E:
+            ret = "IMU Head Orientation Euler";
+            break;
+        case BHY2_SENSOR_ID_NDOF_HEAD_ORI_E:
+            ret = "NDOF Head Orientation Euler";
+            break;
         default:
             if ((sensor_id >= BHY2_SENSOR_ID_CUSTOM_START) && (sensor_id <= BHY2_SENSOR_ID_CUSTOM_END))
             {
@@ -934,6 +943,15 @@ float get_sensor_default_scaling(uint8_t sensor_id)
 
             /* Scaling factor already applied in firmware*/
             break;
+        case BHY2_SENSOR_ID_HEAD_ORI_MIS_ALG:
+        case BHY2_SENSOR_ID_IMU_HEAD_ORI_Q:
+        case BHY2_SENSOR_ID_NDOF_HEAD_ORI_Q:
+            scaling = 1.0f / 16384.0f; /*2^14 -> 16384*/
+            break;
+        case BHY2_SENSOR_ID_IMU_HEAD_ORI_E:
+        case BHY2_SENSOR_ID_NDOF_HEAD_ORI_E:
+            scaling = 360.0f / 32768.0f; /*2^15 -> 32768*/
+            break;
         default:
             scaling = -1.0f; /* Do not apply the scaling factor */
     }
@@ -1015,9 +1033,6 @@ char *get_sensor_parse_format(uint8_t sensor_id)
         case BHY2_SENSOR_ID_KLIO:
             ret = "u8,u8,u8,u8,u8,u8,f";
             break;
-        case BHY2_SENSOR_ID_PDR:
-            ret = "s24,s24,s16,u16,u16,u16,u8";
-            break;
         case BHY2_SENSOR_ID_SWIM:
             ret = "u16,u16,u16,u16,u16,u16,u16";
             break;
@@ -1061,6 +1076,16 @@ char *get_sensor_parse_format(uint8_t sensor_id)
             break;
         case BHY2_SENSOR_ID_AIR_QUALITY:
             ret = "f32,f32,f32,f32,f32,f32,f32,u8";
+            break;
+        case BHY2_SENSOR_ID_HEAD_ORI_MIS_ALG:
+        case BHY2_SENSOR_ID_IMU_HEAD_ORI_Q:
+        case BHY2_SENSOR_ID_NDOF_HEAD_ORI_Q:
+            ret = "s16,s16,s16,s16,u8";
+            break;
+
+        case BHY2_SENSOR_ID_IMU_HEAD_ORI_E:
+        case BHY2_SENSOR_ID_NDOF_HEAD_ORI_E:
+            ret = "s16,s16,s16,u8";
             break;
         default:
             ret = "";
@@ -1139,9 +1164,6 @@ char *get_sensor_axis_names(uint8_t sensor_id)
         case BHY2_SENSOR_ID_KLIO:
             ret = "lin,lid,lpr,lcr,rin,rid,rc";
             break;
-        case BHY2_SENSOR_ID_PDR:
-            ret = "x,y,hoa,h,ha,sc,s";
-            break;
         case BHY2_SENSOR_ID_SWIM:
             ret = "d,lc,f,br,bu,ba,sc";
             break;
@@ -1195,6 +1217,15 @@ char *get_sensor_axis_names(uint8_t sensor_id)
             break;
         case BHY2_SENSOR_ID_AIR_QUALITY:
             ret = "t,h,g,i,si,c,v,a";
+            break;
+        case BHY2_SENSOR_ID_HEAD_ORI_MIS_ALG:
+        case BHY2_SENSOR_ID_IMU_HEAD_ORI_Q:
+        case BHY2_SENSOR_ID_NDOF_HEAD_ORI_Q:
+            ret = "x,y,z,w,a";
+            break;
+        case BHY2_SENSOR_ID_IMU_HEAD_ORI_E:
+        case BHY2_SENSOR_ID_NDOF_HEAD_ORI_E:
+            ret = "h,p,r,a";
             break;
         default:
             ret = "";

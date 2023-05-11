@@ -1,5 +1,5 @@
 /**
-* Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+* Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved.
 *
 * BSD-3-Clause
 *
@@ -31,18 +31,18 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *
 * @file       bhy2_klio_defs.h
-* @date       2023-02-10
-* @version    v1.5.0
+* @date       2023-03-24
+* @version    v1.6.0
 *
 */
 
 #ifndef __BHY2_KLIO_DEFS_H__
 #define __BHY2_KLIO_DEFS_H__
 
-/* Start of CPP guard */
+/* Start of CPP Guard */
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif /*__cplusplus */
 
 #include <stdint.h>
 
@@ -341,9 +341,9 @@ typedef enum
     KLIO_DRIVER_ERROR_OPERATION_PENDING = 8
 } bhy2_klio_driver_error_state_t;
 
-/* End of CPP guard */
+/* End of CPP Guard */
 #ifdef __cplusplus
 }
-#endif
+#endif /*__cplusplus */
 
 #endif /* __BHY2_KLIO_DEFS_H__ */

@@ -26,7 +26,6 @@ $(API_LOCATION)/bhy2.c \
 $(API_LOCATION)/bhy2_hif.c \
 $(API_LOCATION)/bhy2_parse.c \
 $(API_LOCATION)/bhy2_klio.c \
-$(API_LOCATION)/bhy2_pdr.c \
 $(API_LOCATION)/bhy2_swim.c \
 $(API_LOCATION)/bhy2_bsec.c \
 $(API_LOCATION)/bhi3.c \

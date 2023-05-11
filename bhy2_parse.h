@@ -1,5 +1,5 @@
 /**
-* Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+* Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved.
 *
 * BSD-3-Clause
 *
@@ -31,14 +31,14 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *
 * @file       bhy2_parse.h
-* @date       2023-02-10
-* @version    v1.5.0
+* @date       2023-03-24
+* @version    v1.6.0
 *
 */
 #ifndef __BHY2_PARSE_H__
 #define __BHY2_PARSE_H__
 
-/* Start of CPP guard */
+/* Start of CPP Guard */
 #ifdef __cplusplus
 extern "C" {
 #endif /*__cplusplus */
@@ -94,7 +94,7 @@ void bhy2_parse_orientation(const uint8_t *data, struct bhy2_data_orientation *o
  */
 void bhy2_parse_xyz(const uint8_t *data, struct bhy2_data_xyz *vector);
 
-/* End of CPP guard */
+/* End of CPP Guard */
 #ifdef __cplusplus
 }
 #endif /*__cplusplus */

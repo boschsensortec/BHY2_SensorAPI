@@ -1,5 +1,5 @@
 /**
-* Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+* Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved.
 *
 * BSD-3-Clause
 *
@@ -31,15 +31,15 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *
 * @file       bhy2_defs.h
-* @date       2023-02-10
-* @version    v1.5.0
+* @date       2023-03-24
+* @version    v1.6.0
 *
 */
 
 #ifndef __BHY2_DEFS_H__
 #define __BHY2_DEFS_H__
 
-/* Start of CPP guard */
+/* Start of CPP Guard */
 #ifdef __cplusplus
 extern "C" {
 #endif /*__cplusplus */
@@ -801,7 +801,7 @@ enum bhy2_data_inj_mode {
 
 #define BHY2_BYTE_TO_NIBBLE(X)  (((uint8_t)(X)[0] & 0x0F) | (((uint8_t)(X)[1] << 4) & 0xF0))
 
-/* End of CPP guard */
+/* End of CPP Guard */
 #ifdef __cplusplus
 }
 #endif /*__cplusplus */

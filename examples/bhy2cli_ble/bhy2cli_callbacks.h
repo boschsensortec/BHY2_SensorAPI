@@ -38,10 +38,10 @@
 #ifndef _BHY2CLI_CALLBACKS_H_
 #define _BHY2CLI_CALLBACKS_H_
 
-/* Start of CPP guard */
+/* Start of CPP Guard */
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif /*__cplusplus */
 
 #include <stdint.h>
 
@@ -51,10 +51,10 @@ extern "C" {
 #include "bhi3.h"
 
 #include "bhy2_klio.h"
-#include "bhy2_pdr.h"
 #include "bhy2_swim.h"
 #include "bhy2_bsec.h"
 #include "bhi3_multi_tap.h"
+#include "bhy2_head_tracker.h"
 #include "parse.h"
 
 struct bhy2_cli_ref
@@ -210,6 +210,14 @@ int8_t dinject_help(void *ref);
 
 int8_t dinject_callback(uint8_t argc, uint8_t *argv[], void *ref);
 
+int8_t schema_help(void *ref);
+
+int8_t schema_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t hexse_help(void *ref);
+
+int8_t hexse_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
 int8_t logse_help(void *ref);
 
 int8_t logse_callback(uint8_t argc, uint8_t *argv[], void *ref);
@@ -229,42 +237,6 @@ int8_t detlog_callback(uint8_t argc, uint8_t *argv[], void *ref);
 int8_t slabel_help(void *ref);
 
 int8_t slabel_callback(uint8_t argc, uint8_t *argv[], void *ref);
-
-int8_t pfullreset_help(void *ref);
-
-int8_t pfullreset_callback(uint8_t argc, uint8_t *argv[], void *ref);
-
-int8_t ptrackreset_help(void *ref);
-
-int8_t ptrackreset_callback(uint8_t argc, uint8_t *argv[], void *ref);
-
-int8_t prefheaddel_help(void *ref);
-
-int8_t prefheaddel_callback(uint8_t argc, uint8_t *argv[], void *ref);
-
-int8_t pstepinfo_help(void *ref);
-
-int8_t pstepinfo_callback(uint8_t argc, uint8_t *argv[], void *ref);
-
-int8_t psethand_help(void *ref);
-
-int8_t psethand_callback(uint8_t argc, uint8_t *argv[], void *ref);
-
-int8_t pdrver_help(void *ref);
-
-int8_t pdrver_callback(uint8_t argc, uint8_t *argv[], void *ref);
-
-int8_t palver_help(void *ref);
-
-int8_t palver_callback(uint8_t argc, uint8_t *argv[], void *ref);
-
-int8_t pvariant_help(void *ref);
-
-int8_t pvariant_callback(uint8_t argc, uint8_t *argv[], void *ref);
-
-int8_t pdevpos_help(void *ref);
-
-int8_t pdevpos_callback(uint8_t argc, uint8_t *argv[], void *ref);
 
 int8_t swim_help(void *ref);
 
@@ -418,9 +390,57 @@ int8_t wgdgetcnfg_help(void *ref);
 
 int8_t wgdgetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref);
 
-/* End of CPP guard */
+int8_t hmctrig_help(void *ref);
+
+int8_t hmctrig_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t hmcsetcnfg_help(void *ref);
+
+int8_t hmcsetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t hmcgetcnfg_help(void *ref);
+
+int8_t hmcgetcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t hmcsetdefcnfg_help(void *ref);
+
+int8_t hmcsetdefcnfg_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t hmcver_help(void *ref);
+
+int8_t hmcver_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t hmcsetcalcorrq_help(void *ref);
+
+int8_t hmcsetcalcorrq_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t hmcgetcalcorrq_help(void *ref);
+
+int8_t hmcgetcalcorrq_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t hosetheadcorrq_help(void *ref);
+
+int8_t hosetheadcorrq_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t hogetheadcorrq_help(void *ref);
+
+int8_t hogetheadcorrq_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t hover_help(void *ref);
+
+int8_t hover_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t hosetheadcorre_help(void *ref);
+
+int8_t hosetheadcorre_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+int8_t hogetheadcorre_help(void *ref);
+
+int8_t hogetheadcorre_callback(uint8_t argc, uint8_t *argv[], void *ref);
+
+/* End of CPP Guard */
 #ifdef __cplusplus
 }
-#endif
+#endif /*__cplusplus */
 
 #endif /* _BHY2CLI_CALLBACKS_H_ */

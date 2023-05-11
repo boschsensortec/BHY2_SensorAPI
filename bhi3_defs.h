@@ -1,5 +1,5 @@
 /**
-* Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+* Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved.
 *
 * BSD-3-Clause
 *
@@ -31,15 +31,15 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *
 * @file       bhi3_defs.h
-* @date       2023-02-10
-* @version    v1.5.0
+* @date       2023-03-24
+* @version    v1.6.0
 *
 */
 
 #ifndef __BHI3_DEFS_H__
 #define __BHI3_DEFS_H__
 
-/* Start of CPP guard */
+/* Start of CPP Guard */
 #ifdef __cplusplus
 extern "C" {
 #endif /*__cplusplus */
@@ -102,6 +102,7 @@ extern "C" {
 
 #define BHI3_PHY_GYRO_LOW_POWER_MODE_CTRL_CODE   UINT8_C(0x05)
 #define BHI3_PHY_GYRO_NORMAL_POWER_MODE          UINT8_C(0x00)
+#define BHI3_PHY_GYRO_PERFORMANCE_POWER_MODE     UINT8_C(0x01)
 #define BHI3_PHY_GYRO_LOW_POWER_MODE             UINT8_C(0x02)
 #define BHI3_PHY_GYRO_LOW_POWER_MODE_CTRL_LEN    1
 
@@ -172,16 +173,26 @@ static const char * const bhi3_wrist_gesture_detect_output[] = {
     [FLICK_OUT] = "FLICK_OUT"
 }; /*lint -e528 */
 
-enum bhi3_phy_sensor_power_mode {
-    NORMAL,
-    LOW_POWER = 0x02
+enum bhi3_phy_sensor_acc_power_mode {
+    ACC_NORMAL,
+    ACC_LOW_POWER = 0x02
 };
 
-static const char * const bhi3_phy_sensor_pwm_output[] = {
-    [NORMAL] = "NORMAL", [LOW_POWER] = "LOW POWER"
+enum bhi3_phy_sensor_gyro_power_mode {
+    GYRO_NORMAL,
+    GYRO_PERFORMANCE,
+    GYRO_LOW_POWER
+};
+
+static const char * const bhi3_phy_sensor_acc_pwm_output[] = {
+    [ACC_NORMAL] = "NORMAL", [ACC_LOW_POWER] = "LOW POWER"
 }; /*lint -e528 */
 
-/* End of CPP guard */
+static const char * const bhi3_phy_sensor_gyro_pwm_output[] = {
+    [GYRO_NORMAL] = "NORMAL", [GYRO_PERFORMANCE] = "PERFORMANCE", [GYRO_LOW_POWER] = "LOW POWER"
+}; /*lint -e528 */
+
+/* End of CPP Guard */
 #ifdef __cplusplus
 }
 #endif /*__cplusplus */

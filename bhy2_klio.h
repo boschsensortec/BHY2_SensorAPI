@@ -1,5 +1,5 @@
 /**
-* Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+* Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved.
 *
 * BSD-3-Clause
 *
@@ -31,15 +31,15 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *
 * @file       bhy2_klio.h
-* @date       2023-02-10
-* @version    v1.5.0
+* @date       2023-03-24
+* @version    v1.6.0
 *
 */
 
 #ifndef __BHY2_KLIO_H__
 #define __BHY2_KLIO_H__
 
-/* Start of CPP guard */
+/* Start of CPP Guard */
 #ifdef __cplusplus
 extern "C" {
 #endif /*__cplusplus */
@@ -219,7 +219,7 @@ int8_t bhy2_klio_get_parameter(const bhy2_klio_parameter_t id,
                                uint16_t *size,
                                struct bhy2_dev *dev);
 
-/* End of CPP guard */
+/* End of CPP Guard */
 #ifdef __cplusplus
 }
 #endif /*__cplusplus */

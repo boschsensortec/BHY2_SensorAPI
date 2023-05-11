@@ -1,5 +1,5 @@
 /**
-* Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+* Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved.
 *
 * BSD-3-Clause
 *
@@ -31,15 +31,15 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *
 * @file       bhi3.h
-* @date       2023-02-10
-* @version    v1.5.0
+* @date       2023-03-24
+* @version    v1.6.0
 *
 */
 
 #ifndef __BHI3_H__
 #define __BHI3_H__
 
-/* Start of CPP guard */
+/* Start of CPP Guard */
 #ifdef __cplusplus
 extern "C" {
 #endif /*__cplusplus */
@@ -322,7 +322,7 @@ int8_t bhi3_set_wrist_gesture_detect_config(const uint8_t *wgd_cnfg, struct bhy2
  */
 int8_t bhi3_get_wrist_gesture_detect_config(uint8_t *wgd_cnfg, struct bhy2_dev *dev);
 
-/* End of CPP guard */
+/* End of CPP Guard */
 #ifdef __cplusplus
 }
 #endif /*__cplusplus */

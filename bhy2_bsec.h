@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -31,15 +31,15 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * @file       bhy2_bsec.h
- * @date       2023-02-10
- * @version    v1.5.0
+ * @date       2023-03-24
+ * @version    v1.6.0
  *
  */
 
 #ifndef _BHY2_BSEC_H_
 #define _BHY2_BSEC_H_
 
-/* Start of CPP guard */
+/* Start of CPP Guard */
 #ifdef __cplusplus
 extern "C" {
 #endif /*__cplusplus */
@@ -66,7 +66,7 @@ struct bhy2_bsec_air_quality
 
 void bhy2_bsec_parse_air_quality(const uint8_t *payload, struct bhy2_bsec_air_quality *data);
 
-/* End of CPP guard */
+/* End of CPP Guard */
 #ifdef __cplusplus
 }
 #endif /*__cplusplus */

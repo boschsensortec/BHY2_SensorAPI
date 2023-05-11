@@ -1,5 +1,5 @@
 /**
-* Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+* Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved.
 *
 * BSD-3-Clause
 *
@@ -31,18 +31,18 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *
 * @file       bhi3_multi_tap_defs.h
-* @date       2023-02-10
-* @version    v1.5.0
+* @date       2023-03-24
+* @version    v1.6.0
 *
 */
 
 #ifndef _BHI3_MULTI_TAP_DEFS_H_
 #define _BHI3_MULTI_TAP_DEFS_H_
 
-/* Start of CPP guard */
+/* Start of CPP Guard */
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif /*__cplusplus */
 
 #include <stdint.h>
 #include <string.h>
@@ -74,7 +74,7 @@ extern "C" {
 
 #define BHI3_SINGLE_TAP_AXIS_SEL_MASK              0x03
 #define BHI3_SINGLE_TAP_WAIT_TIMEOUT_MASK          0x04
-#define BHI3_SINGLE_TAP_MAX_PEAKS_FOR_TAP_MASK     0x3C
+#define BHI3_SINGLE_TAP_MAX_PEAKS_FOR_TAP_MASK     0x38
 #define BHI3_SINGLE_TAP_FILTER_MODE_MASK           0xC0
 
 #define BHI3_DOUBLE_TAP_TAP_PEAK_DUR_MASK          0x03FF
@@ -181,9 +181,9 @@ static const char * const bhi3_multi_tap_string_out[] = {
     [TRIPLE_DOUBLE_TAP] = "TRIPLE_DOUBLE_TAP", [TRIPLE_DOUBLE_SINGLE_TAP] = "TRIPLE_DOUBLE_SINGLE_TAP"
 }; /*lint -e528 */
 
-/* End of CPP guard */
+/* End of CPP Guard */
 #ifdef __cplusplus
 }
-#endif
+#endif /*__cplusplus */
 
 #endif /* _BHI3_MULTI_TAP_DEFS_H_ */

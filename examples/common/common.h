@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2023 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -45,9 +45,9 @@
 #include "bhi3_multi_tap.h"
 
 #include "bhy2_klio.h"
-#include "bhy2_pdr.h"
 #include "bhy2_swim.h"
 #include "bhy2_bsec.h"
+#include "bhy2_head_tracker.h"
 #include "coines.h"
 
 #define BHY260_APP20_CS_PIN     COINES_SHUTTLE_PIN_7
