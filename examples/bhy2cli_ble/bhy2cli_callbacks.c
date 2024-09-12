@@ -4011,9 +4011,15 @@ static void write_meta_info(struct logbin_dev *log, struct bhy2_dev *bhy2)
     logbin_start_meta(log);
 
     bhy2_update_virtual_sensor_list(bhy2);
-#ifndef PC
+
+#if !defined(PC) && defined(MCU_APP30)
     coines_set_pin_config(COINES_APP30_LED_G, COINES_PIN_DIRECTION_OUT, COINES_PIN_VALUE_LOW);
 #endif
+
+#if defined(MCU_APP31)
+    coines_set_pin_config(COINES_APP31_LED_G, COINES_PIN_DIRECTION_OUT, COINES_PIN_VALUE_HIGH);
+#endif
+
     for (uint8_t i = 1; i < BHY2_SENSOR_ID_MAX; i++)
     {
         if (bhy2_is_sensor_available(i, bhy2))
@@ -4030,9 +4036,14 @@ static void write_meta_info(struct logbin_dev *log, struct bhy2_dev *bhy2)
 
     logbin_end_meta(log);
 
-#ifndef PC
+#if !defined(PC) && defined(MCU_APP30)
     coines_set_pin_config(COINES_APP30_LED_G, COINES_PIN_DIRECTION_OUT, COINES_PIN_VALUE_HIGH);
 #endif
+
+#if defined(MCU_APP31)
+    coines_set_pin_config(COINES_APP31_LED_G, COINES_PIN_DIRECTION_OUT, COINES_PIN_VALUE_LOW);
+#endif
+
 }
 
 static void schema_info(struct bhy2_dev *bhy2)
