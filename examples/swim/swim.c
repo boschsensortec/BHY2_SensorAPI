@@ -106,8 +106,8 @@ struct bhy2_swim_algo_output data_out;
 /*! Parameter for time in second and nano seconds */
 uint32_t seconds, nano_seconds;
 
-/*! Callback for button 1 interrupt */
-static void button1CB(uint32_t param1, uint32_t param2);
+/*! Callback for button interrupt */
+static void buttonCB(uint32_t param1, uint32_t param2);
 
 /*! SWIM configuration parameter structure which is
  * in sync with the parameter page of swim sensor 0x0B00 */
@@ -150,8 +150,16 @@ int main(void)
     print_api_error(rslt, &bhy2);
 
     /*! APP3.0 Board T1 button interrupt enabling */
+#if defined(MCU_APP30)
     coines_set_pin_config(COINES_APP30_BUTTON_1, COINES_PIN_DIRECTION_IN, COINES_PIN_VALUE_HIGH);
-    coines_attach_interrupt(COINES_APP30_BUTTON_1, button1CB, COINES_PIN_INTERRUPT_FALLING_EDGE);
+    coines_attach_interrupt(COINES_APP30_BUTTON_1, buttonCB, COINES_PIN_INTERRUPT_FALLING_EDGE);
+#endif
+
+    /*! APP3.1 Board T1 button interrupt enabling */
+#if defined(MCU_APP31)
+    coines_set_pin_config(COINES_APP31_BUTTON_2, COINES_PIN_DIRECTION_IN, COINES_PIN_VALUE_HIGH);
+    coines_attach_interrupt(COINES_APP31_BUTTON_2, buttonCB, COINES_PIN_INTERRUPT_FALLING_EDGE);
+#endif
 
     rslt = bhy2_soft_reset(&bhy2);
     print_api_error(rslt, &bhy2);
@@ -534,8 +542,8 @@ static void upload_firmware(uint8_t boot_stat, struct bhy2_dev *dev)
     print_api_error(temp_rslt, dev);
 }
 
-/*! Callback for button 1 event */
-void button1CB(uint32_t param1, uint32_t param2)
+/*! Callback for button event */
+void buttonCB(uint32_t param1, uint32_t param2)
 {
     (void)param1;
     (void)param2;

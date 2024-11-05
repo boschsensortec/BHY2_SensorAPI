@@ -52,12 +52,22 @@ static void log_data(uint8_t sid, uint64_t tns, uint8_t event_size, uint8_t *eve
 {
     if (logdev && logdev->logfile)
     {
-#ifndef PC
+#if !defined(PC) && defined(MCU_APP30)
         coines_set_pin_config(COINES_APP30_LED_G, COINES_PIN_DIRECTION_OUT, COINES_PIN_VALUE_LOW);
 #endif
+
+#if defined(MCU_APP31)
+        coines_set_pin_config(COINES_APP31_LED_G, COINES_PIN_DIRECTION_OUT, COINES_PIN_VALUE_HIGH);
+#endif
+
         logbin_add_data(sid, tns, event_size, event_payload, logdev);
-#ifndef PC
+
+#if !defined(PC) && defined(MCU_APP30)
         coines_set_pin_config(COINES_APP30_LED_G, COINES_PIN_DIRECTION_OUT, COINES_PIN_VALUE_HIGH);
+#endif
+
+#if defined(MCU_APP31)
+        coines_set_pin_config(COINES_APP31_LED_G, COINES_PIN_DIRECTION_OUT, COINES_PIN_VALUE_LOW);
 #endif
     }
 }
